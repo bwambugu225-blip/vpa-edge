@@ -1,0 +1,142 @@
+#vpa-edge-screen-panel {
+  position: fixed;
+  z-index: 2147483646;
+  top: 56px;
+  right: 12px;
+  width: min(240px, calc(100vw - 24px));
+  color: #e8edf2;
+  background: rgba(17, 25, 35, 0.97);
+  border: 1px solid #394956;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px #0007;
+  font: 12px/1.4 system-ui, sans-serif;
+  pointer-events: none;
+}
+
+#vpa-edge-screen-panel *,
+#vpa-edge-screen-panel *::before,
+#vpa-edge-screen-panel *::after {
+  box-sizing: border-box;
+}
+
+#vpa-edge-screen-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 11px;
+  background: #192630;
+  border-radius: 8px 8px 0 0;
+}
+
+#vpa-edge-screen-panel header strong {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #8ae0be;
+}
+
+#vpa-edge-screen-panel header span {
+  font-size: 10px;
+  color: #b8c6ce;
+}
+
+#vpa-edge-screen-panel header button {
+  pointer-events: auto;
+  color: #b8c6ce;
+  background: transparent;
+  border: 0;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#vpa-edge-screen-panel section {
+  padding: 10px 11px;
+}
+
+#vpa-edge-screen-panel .vpa-screen-market {
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 9px;
+}
+
+#vpa-edge-screen-panel .vpa-screen-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+#vpa-edge-screen-panel .vpa-screen-grid div,
+#vpa-edge-screen-panel .vpa-screen-ohlc {
+  background: #192630;
+  border-radius: 5px;
+  padding: 7px;
+}
+
+#vpa-edge-screen-panel .vpa-screen-pattern {
+  margin-top: 8px;
+  padding: 7px;
+  border: 1px solid #394956;
+  border-radius: 5px;
+  color: #c1cdd3;
+  font-size: 10px;
+}
+
+#vpa-edge-screen-panel .vpa-screen-alert {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #536371;
+  border-radius: 5px;
+  color: #d1d9df;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+#vpa-edge-screen-panel .vpa-screen-alert[data-direction="bullish"] {
+  color: #8ae0be;
+  border-color: #16866d;
+}
+
+#vpa-edge-screen-panel .vpa-screen-alert[data-direction="bearish"] {
+  color: #ff9aa3;
+  border-color: #ad3c49;
+}
+
+#vpa-edge-screen-panel small {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: #8ea1ad;
+  margin-bottom: 3px;
+}
+
+#vpa-edge-screen-panel b {
+  display: block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+#vpa-edge-screen-panel .vpa-screen-ohlc {
+  margin-top: 8px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+#vpa-edge-screen-panel p {
+  font-size: 10px;
+  color: #c1cdd3;
+  margin: 8px 0 5px;
+}
+
+#vpa-edge-screen-panel footer {
+  font-size: 9px;
+  color: #8295a1;
+}
+
+#vpa-edge-screen-panel section[hidden] {
+  display: none;
+}
+
+#vpa-edge-screen-panel[hidden],
+#vpa-edge-screen-markings[hidden] {
+  display: none;
+}

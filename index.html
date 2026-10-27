@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101820">
+    <title>VPA Edge · Deriv Rise/Fall</title>
+    <link rel="stylesheet" href="./site.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="VPA Edge home"><span class="brand-mark">V</span> VPA Edge</a>
+      <span class="topbar-note">LIVE DERIV DATA ONLY · NO SIMULATION</span>
+      <span id="connection-pill" class="connection-pill"><i></i> Disconnected</span>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">PRICE ACTION, WITH CONTEXT</p>
+          <h1>Read the effort.<br><span>Control every order.</span></h1>
+          <p class="hero-copy">Live Deriv prices, five-second VPA signals, and explicit controls for Rise/Fall order size, expiry, account, and loss limits.</p>
+        </div>
+        <div class="feed-controls">
+          <label for="symbol">Underlying</label>
+          <div class="control-row">
+            <input id="symbol" value="R_100" autocomplete="off" spellcheck="false">
+            <button id="start" type="button">Connect market</button>
+            <button id="stop" type="button" class="button-secondary" disabled>Stop</button>
+          </div>
+          <p id="market-status" class="muted" role="status">Ready to connect to Deriv public data</p>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="Market summary">
+        <article class="metric-card"><span>LAST PRICE</span><strong id="price">—</strong><small id="market-symbol">No market selected</small></article>
+        <article class="metric-card"><span>IMPORTED TICKS</span><strong id="ticks">0 <small>/ 500</small></strong><small>Initial history request</small></article>
+        <article class="metric-card"><span>COMPLETED BARS</span><strong id="bars">0</strong><small>5-second OHLC</small></article>
+        <article class="metric-card"><span>RELATIVE ACTIVITY</span><strong id="activity-metric">—</strong><small>Tick-count proxy</small></article>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel chart-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">LIVE MARKET</p><h2 id="chart-title">Waiting for feed</h2></div>
+            <span class="timeframe-chip">5 SEC</span>
+          </div>
+          <div id="chart" class="chart" aria-label="Recent five-second OHLC candles">
+            <div id="chart-empty" class="empty-state">Connect a market to build the live candle chart.</div>
+            <svg id="candle-chart" viewBox="0 0 760 280" role="img" aria-label="Five-second OHLC candle chart"></svg>
+          </div>
+          <div class="ohlc-strip">
+            <span>LAST BAR OHLC</span>
+            <b id="ohlc">—</b>
+          </div>
+        </article>
+
+        <article class="panel signal-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">LATEST CLOSED CANDLE</p><h2>VPA read</h2></div>
+            <span id="signal-chip" class="signal-chip neutral">WAITING</span>
+          </div>
+          <div id="signal-direction" class="signal-direction neutral">No signal yet</div>
+          <p id="analysis-reason" class="muted">Connect a market. The first 500 ticks are imported immediately.</p>
+          <p id="analysis-quality" class="quality-note"></p>
+          <div id="rule-list" class="rule-list"></div>
+        </article>
+      </section>
+
+      <section class="lower-grid">
+        <article class="panel checklist-panel">
+          <div class="panel-heading"><div><p class="eyebrow">BEFORE ANY DECISION</p><h2>Effort vs. result checklist</h2></div></div>
+          <div id="checklist" class="checklist">
+            <p class="muted">The checklist appears after the VPA baseline is ready.</p>
+          </div>
+        </article>
+
+        <article class="panel account-panel">
+          <div class="panel-heading"><div><p class="eyebrow">DERIV ACCOUNT</p><h2>Connect with PAT</h2></div><span class="lock-mark">MEMORY ONLY</span></div>
+          <label for="pat">Personal Access Token with trade scope</label>
+          <div class="control-row">
+            <input id="pat" name="deriv-pat-input" type="password" autocomplete="new-password" spellcheck="false" placeholder="Required to place orders">
+            <button id="validate-pat" type="button" class="button-secondary">Load accounts</button>
+          </div>
+          <p id="account-status" class="muted" role="status">Market data is public. PAT stays in this tab's memory and is cleared after authenticated connection.</p>
+          <label for="account">Trading account</label>
+          <select id="account" disabled><option value="">Load accounts first</option></select>
+        </article>
+
+        <article class="panel trading-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">AUTOMATION CONTROLS</p><h2>Rise/Fall bot</h2></div>
+            <span id="bot-status-chip" class="signal-chip neutral">STOPPED</span>
+          </div>
+          <div class="settings-grid">
+            <div><label for="stake">Stake per order</label><input id="stake" type="number" min="0.01" step="0.01" value="0.35"></div>
+            <div><label for="currency-readout">Account currency</label><input id="currency-readout" value="From account" readonly></div>
+            <div><label for="duration">Contract expiry</label><input id="duration" type="number" min="1" step="1" value="5"></div>
+            <div><label for="duration-unit">Expiry unit</label><select id="duration-unit"><option value="s" selected>Seconds</option><option value="t">Ticks</option><option value="m">Minutes</option></select></div>
+            <div><label for="max-trades">Max orders / rolling hour</label><input id="max-trades" type="number" min="1" max="60" step="1" value="1"></div>
+            <div><label for="daily-loss">Daily bot loss stop</label><input id="daily-loss" type="number" min="0.01" step="0.01" placeholder="Required"></div>
+            <div><label for="min-rules">Required matching VPA rules</label><select id="min-rules"><option value="1">1 rule</option><option value="2">2 rules</option><option value="3">3 rules</option></select></div>
+          </div>
+          <label class="risk-check" for="real-confirm">
+            <input id="real-confirm" type="checkbox">
+            <span>I understand Real mode places orders with real funds. Require confirmation every time Real is selected.</span>
+          </label>
+          <div class="trading-actions">
+            <button id="start-bot" type="button" disabled>Start bot</button>
+            <button id="stop-bot" type="button" class="button-secondary" disabled>Stop new orders</button>
+          </div>
+          <button id="recover-contract" type="button" class="button-secondary recover-button" hidden>Reconnect to monitor open contract</button>
+          <button id="reconcile-pending" type="button" class="button-secondary recover-button" hidden>Reconcile uncertain order after checking Deriv</button>
+          <p id="bot-status" class="muted" role="status">Load a PAT account, connect live market data, and set a daily loss stop before starting.</p>
+          <div class="bot-summary">
+            <span>BOT NET P/L TODAY <b id="bot-pnl">0.00</b></span>
+            <span>ORDERS THIS HOUR <b id="hourly-count">0 / 1</b></span>
+            <span>OPEN BOT CONTRACT <b id="open-contract">None</b></span>
+          </div>
+          <div id="trade-log" class="trade-log" aria-live="polite"></div>
+          <p class="fine-print">No martingale. A new order requires a fresh completed-candle VPA signal, an available hourly slot, and no open bot contract. The daily stop tracks this bot's realized P/L in this browser profile; it cannot account for manual trades on Deriv. Never use a stake you cannot afford to lose.</p>
+        </article>
+      </section>
+
+      <footer class="disclaimer">
+        <strong>Risk warning:</strong> Automated trading can lose money rapidly. VPA signals are heuristic, not guaranteed. Live tick count is an activity proxy, not actual traded volume. By selecting Real and starting the bot you authorize automatic orders subject to the controls above. Stop prevents future bot orders; it does not cancel an already purchased contract. PATs are held only in page memory and are not saved to disk.
+      </footer>
+    </main>
+    <script type="module" src="./site.js"></script>
+  </body>
+</html>
