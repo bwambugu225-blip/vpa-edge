@@ -155,3 +155,41 @@ test("rejects an OTP URL outside Deriv's authenticated trading gateways", async 
   );
   assert.equal(FakeTradingSocket.instances.length, 0);
 });
+
+test("aborts pending PAT authentication when the trading connection is stopped", async () => {
+  FakeTradingSocket.instances = [];
+  let requestSignal;
+  const client = new DerivTradingClient({
+    fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
+      requestSignal = options.signal;
+      options.signal.addEventListener("abort", () => reject(new Error("request aborted")), {
+        once: true
+      });
+    }),
+    WebSocketImpl: FakeTradingSocket
+  });
+  const connection = client.connect({ token: "fake-pat-token", accountId: "CR12345" });
+  await new Promise((resolve) => setImmediate(resolve));
+  client.close();
+  await assert.rejects(connection, /request aborted/);
+  assert.equal(requestSignal.aborted, true);
+  assert.equal(FakeTradingSocket.instances.length, 0);
+});
+
+test("stopping a pending WebSocket connection rejects immediately", async () => {
+  FakeTradingSocket.instances = [];
+  const client = new DerivTradingClient({
+    fetchImpl: async () => ({
+      ok: true,
+      json: async () => ({
+        data: { url: "wss://api.derivws.com/trading/v1/options/ws/demo?otp=ephemeral" }
+      })
+    }),
+    WebSocketImpl: FakeTradingSocket
+  });
+  const connection = client.connect({ token: "fake-pat-token", accountId: "CR12345" });
+  await new Promise((resolve) => setImmediate(resolve));
+  client.close();
+  await assert.rejects(connection, /stopped/);
+  assert.equal(FakeTradingSocket.instances[0].readyState, 3);
+});

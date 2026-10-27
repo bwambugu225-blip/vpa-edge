@@ -76,13 +76,13 @@
         </article>
 
         <article class="panel account-panel">
-          <div class="panel-heading"><div><p class="eyebrow">DERIV ACCOUNT</p><h2>Connect with PAT</h2></div><span class="lock-mark">MEMORY ONLY</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">OPTIONAL TRADING AUTHORIZATION</p><h2>Connect with PAT</h2></div><span class="lock-mark">MEMORY ONLY</span></div>
           <label for="pat">Personal Access Token with trade scope</label>
           <div class="control-row">
             <input id="pat" name="deriv-pat-input" type="password" autocomplete="new-password" spellcheck="false" placeholder="Required to place orders">
             <button id="validate-pat" type="button" class="button-secondary">Load accounts</button>
           </div>
-          <p id="account-status" class="muted" role="status">Market data is public. PAT stays in this tab's memory and is cleared after authenticated connection.</p>
+          <p id="account-status" class="muted" role="status">Live market data starts automatically without a token. A trade-scoped PAT is only needed to authorize orders and is never saved.</p>
           <label for="account">Trading account</label>
           <select id="account" disabled><option value="">Load accounts first</option></select>
         </article>
@@ -111,7 +111,7 @@
           </div>
           <button id="recover-contract" type="button" class="button-secondary recover-button" hidden>Reconnect to monitor open contract</button>
           <button id="reconcile-pending" type="button" class="button-secondary recover-button" hidden>Reconcile uncertain order after checking Deriv</button>
-          <p id="bot-status" class="muted" role="status">Load a PAT account, connect live market data, and set a daily loss stop before starting.</p>
+          <p id="bot-status" class="muted" role="status">Live market data starts automatically. Load a trade-scoped PAT only when you are ready to authorize trading.</p>
           <div class="bot-summary">
             <span>BOT NET P/L TODAY <b id="bot-pnl">0.00</b></span>
             <span>ORDERS THIS HOUR <b id="hourly-count">0 / 1</b></span>

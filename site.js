@@ -42,7 +42,9 @@ let tradingAccountId = null;
 let ledgerError = null;
 let releaseTradeLock = null;
 let availableBalance = null;
-let botStatusMessage = "Load a PAT account, connect live market data, and set a daily loss stop before starting.";
+let botStatusMessage = "Live market data starts automatically. Load a trade-scoped PAT only when you are ready to authorize trading.";
+let startAttemptPending = false;
+let botStartGeneration = 0;
 
 function price(value) {
   return Number.isFinite(value) ? String(Number(value.toPrecision(8))) : "—";
@@ -181,7 +183,8 @@ function selectedAccount() {
 function setBotStatus(message, state = "neutral") {
   botStatusMessage = message;
   elements["bot-status"].textContent = message;
-  elements["bot-status-chip"].textContent = botRunning ? "RUNNING" : state === "error" ? "ERROR" : "STOPPED";
+  const status = botRunning ? "RUNNING" : startAttemptPending ? "STARTING" : state === "error" ? "ERROR" : "STOPPED";
+  elements["bot-status-chip"].textContent = status;
   elements["bot-status-chip"].className = `signal-chip ${botRunning ? "bullish" : state === "error" ? "bearish" : "neutral"}`;
 }
 
@@ -217,17 +220,18 @@ function renderTradingState() {
   elements["open-contract"].textContent = !openContract ? "None"
     : openContract.contractId ? `#${openContract.contractId} · ${openContract.status ?? "OPEN"}`
       : "Order state unknown · reconcile";
-  elements.account.disabled = Boolean(botRunning || openContract);
-  elements["validate-pat"].disabled = Boolean(botRunning || (openContract && tradingClient?.isConnected));
-  elements.pat.disabled = Boolean(botRunning || (openContract && tradingClient?.isConnected));
+  const botBusy = botRunning || startAttemptPending || orderInFlight;
+  elements.account.disabled = Boolean(botBusy || openContract);
+  elements["validate-pat"].disabled = Boolean(botBusy || (openContract && tradingClient?.isConnected));
+  elements.pat.disabled = Boolean(botBusy || (openContract && tradingClient?.isConnected));
   for (const control of [
     elements.stake, elements.duration, elements["duration-unit"],
     elements["max-trades"], elements["daily-loss"], elements["min-rules"],
     elements["real-confirm"]
   ]) {
-    control.disabled = botRunning || orderInFlight;
+    control.disabled = botBusy;
   }
-  elements.symbol.disabled = botRunning || orderInFlight;
+  elements.symbol.disabled = botBusy;
   elements["recover-contract"].hidden = !openContract || !openContract.contractId ||
     Boolean(tradingClient?.isConnected) || !patInMemory;
   elements["reconcile-pending"].hidden = !openContract ||
@@ -242,9 +246,11 @@ function refreshTradingControls() {
   const canStart = Boolean(account &&
     (patInMemory || (tradingClient && tradingAccountId === account.account_id)) &&
     latestMarketSnapshot?.status === "streaming" &&
-    !ledgerError && !botRunning && !orderInFlight && !tradingLedger?.openContract);
+    !ledgerError && !botRunning && !startAttemptPending && !orderInFlight &&
+    !tradingLedger?.openContract);
   elements["start-bot"].disabled = !canStart;
-  elements["stop-bot"].disabled = !botRunning;
+  elements["stop-bot"].disabled = !(botRunning || startAttemptPending);
+  elements["stop-bot"].textContent = startAttemptPending ? "Cancel start" : "Stop new orders";
 }
 
 function setAccounts(nextAccounts) {
@@ -283,6 +289,7 @@ function loadLedgerForAccount(accountId) {
 }
 
 function stopBot(message, state = "neutral") {
+  if (startAttemptPending) botStartGeneration += 1;
   botRunning = false;
   if (message) setBotStatus(message, state);
   const hasOpenContract = Boolean(tradingLedger?.openContract);
@@ -534,7 +541,7 @@ function render(snapshot) {
   renderRules(analysis);
   renderChecklist(analysis);
   drawCandles(latestCandles);
-  if (snapshot.status !== "streaming" && botRunning) {
+  if (snapshot.status !== "streaming" && (botRunning || startAttemptPending)) {
     stopBot("Live market feed disconnected; automatic orders paused.", "error");
   }
   renderTradingState();
@@ -568,9 +575,9 @@ async function ensureTradingConnection(account) {
     tradingAccountId = null;
   }
   const client = new DerivTradingClient();
-  await client.connect({ token: patInMemory, accountId: account.account_id });
   tradingClient = client;
   tradingAccountId = account.account_id;
+  await client.connect({ token: patInMemory, accountId: account.account_id });
   unsubscribeTrading = client.onMessage(handleTradingMessage);
   patInMemory = null;
   elements.pat.value = "";
@@ -690,6 +697,10 @@ elements["real-confirm"].addEventListener("change", () => {
 });
 
 elements["start-bot"].addEventListener("click", async () => {
+  if (startAttemptPending || botRunning) return;
+  startAttemptPending = true;
+  const attempt = ++botStartGeneration;
+  renderTradingState();
   let lockAcquired = false;
   const account = selectedAccount();
   const config = {
@@ -704,6 +715,9 @@ elements["start-bot"].addEventListener("click", async () => {
     realAccountConfirmed: elements["real-confirm"].checked,
     symbol: elements.symbol.value.trim(),
     currency: account?.currency
+  };
+  const ensureCurrentAttempt = () => {
+    if (attempt !== botStartGeneration) throw new Error("Bot start cancelled.");
   };
   try {
     validateTradingConfig(config);
@@ -735,15 +749,19 @@ elements["start-bot"].addEventListener("click", async () => {
 
     await acquireAccountLock(account.account_id);
     lockAcquired = true;
+    ensureCurrentAttempt();
     const client = await ensureTradingConnection(account);
+    ensureCurrentAttempt();
 
     const portfolioResponse = await client.request({ portfolio: 1 }, "portfolio");
+    ensureCurrentAttempt();
     const openContracts = portfolioResponse.portfolio?.contracts;
     if (!Array.isArray(openContracts)) throw new Error("Deriv returned an invalid portfolio response.");
     if (openContracts.length) {
       throw new Error(`The selected account has ${openContracts.length} open contract(s). Close or settle them before starting the bot.`);
     }
     const balanceResponse = await client.request({ balance: 1, subscribe: 1 }, "balance");
+    ensureCurrentAttempt();
     const balance = Number(balanceResponse.balance?.balance);
     const currency = balanceResponse.balance?.currency;
     if (!Number.isFinite(balance) || typeof currency !== "string") {
@@ -761,6 +779,7 @@ elements["start-bot"].addEventListener("click", async () => {
     botConfig = config;
     lastHandledCandleTimestamp = latestCandles.filter((candle) => candle.isClosed).at(-1)?.timestamp ?? null;
     botRunning = true;
+    startAttemptPending = false;
     setBotStatus(`${account.account_type.toUpperCase()} bot is running on ${config.symbol}. Orders only follow new completed-bar VPA signals.`);
     renderTradingState();
   } catch (error) {
@@ -773,7 +792,9 @@ elements["start-bot"].addEventListener("click", async () => {
       tradingAccountId = null;
     }
     if (lockAcquired && !tradingLedger?.openContract) releaseAccountLock();
-    setBotStatus(error.message, "error");
+    if (attempt === botStartGeneration) setBotStatus(error.message, "error");
+  } finally {
+    startAttemptPending = false;
     renderTradingState();
   }
 });
@@ -831,7 +852,9 @@ elements["reconcile-pending"].addEventListener("click", () => {
 });
 
 elements["stop-bot"].addEventListener("click", () => {
-  stopBot(tradingLedger?.openContract
+  stopBot(startAttemptPending
+    ? "Bot start cancelled. Waiting for the trading connection to close safely."
+    : tradingLedger?.openContract
     ? "Stopped. No new orders will be placed; the existing contract will continue until settlement."
     : "Bot stopped. No further orders will be placed.");
 });
@@ -870,3 +893,4 @@ render({
   lastQuote: null,
   candles: []
 });
+startMarket(elements.symbol.value.trim());

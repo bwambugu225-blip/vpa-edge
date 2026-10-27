@@ -16,6 +16,7 @@ export class DerivTradingClient {
     this.listeners = new Set();
     this.nextRequestId = 1;
     this.closed = false;
+    this.rejectConnection = null;
   }
 
   get isConnected() {
@@ -23,6 +24,7 @@ export class DerivTradingClient {
   }
 
   async connect({ token, accountId }) {
+    if (this.closed) throw new Error("Deriv trading connection was stopped.");
     if (typeof token !== "string" || token.trim().length < 8) {
       throw new TypeError("Enter a valid Deriv PAT with trade scope.");
     }
@@ -30,6 +32,7 @@ export class DerivTradingClient {
       throw new TypeError("Choose a valid Deriv account.");
     }
 
+    this.connectionAbortController = new AbortController();
     const response = await this.fetchImpl(
       `${DERIV_API_BASE_URL}/trading/v1/options/accounts/${encodeURIComponent(accountId)}/otp`,
       {
@@ -38,9 +41,11 @@ export class DerivTradingClient {
           Authorization: `Bearer ${token.trim()}`,
           "Deriv-App-ID": DERIV_APP_ID,
           "Content-Type": "application/json"
-        }
+        },
+        signal: this.connectionAbortController.signal
       }
     );
+    this.connectionAbortController = null;
     let payload;
     try {
       payload = await response.json();
@@ -54,6 +59,7 @@ export class DerivTradingClient {
         : `Deriv authentication failed with HTTP ${response.status}.`);
     }
 
+    if (this.closed) throw new Error("Deriv trading connection was stopped.");
     const url = new URL(payload?.data?.url ?? "");
     if (url.protocol !== "wss:" || url.hostname !== "api.derivws.com" ||
         !/^\/trading\/v1\/options\/ws\/(demo|real)$/.test(url.pathname)) {
@@ -65,6 +71,16 @@ export class DerivTradingClient {
   openSocket(url) {
     return new Promise((resolve, reject) => {
       let socket;
+      let settled = false;
+      let timeout;
+      const finish = (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        this.rejectConnection = null;
+        if (error) reject(error);
+        else resolve();
+      };
       try {
         socket = new this.WebSocketImpl(url);
       } catch (error) {
@@ -72,24 +88,24 @@ export class DerivTradingClient {
         return;
       }
       this.socket = socket;
-      const timeout = setTimeout(() => {
+      timeout = setTimeout(() => {
         if (socket.readyState === 1) return;
         this.close();
-        reject(new Error("Timed out connecting to Deriv trading WebSocket."));
+        finish(new Error("Timed out connecting to Deriv trading WebSocket."));
       }, 12000);
+      this.rejectConnection = (error) => finish(error);
       socket.onopen = () => {
-        clearTimeout(timeout);
-        resolve();
+        finish();
       };
       socket.onmessage = (event) => this.handleMessage(event.data);
       socket.onerror = () => {
         if (socket.readyState !== 1) {
-          clearTimeout(timeout);
-          reject(new Error("Deriv trading WebSocket connection failed."));
+          finish(new Error("Deriv trading WebSocket connection failed."));
         }
       };
       socket.onclose = () => {
         clearTimeout(timeout);
+        if (!settled) finish(new Error("Deriv trading WebSocket closed before connecting."));
         if (!this.closed) {
           this.rejectPending(new Error("Deriv trading connection closed."));
           this.notify({ type: "disconnect" });
@@ -244,6 +260,9 @@ export class DerivTradingClient {
 
   close() {
     this.closed = true;
+    this.connectionAbortController?.abort();
+    this.connectionAbortController = null;
+    this.rejectConnection?.(new Error("Deriv trading connection stopped."));
     this.rejectPending(new Error("Deriv trading connection stopped."));
     const socket = this.socket;
     this.socket = null;

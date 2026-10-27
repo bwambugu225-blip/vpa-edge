@@ -16,15 +16,17 @@ Requires Node.js 18 or newer:
 npm.cmd start
 ```
 
-Open <http://127.0.0.1:5173>, enter a Deriv underlying symbol such as `R_100`,
-and select **Connect market**. The browser requests the latest 500 ticks from
+Open <http://127.0.0.1:5173>. The public market feed connects automatically
+using `R_100`; change the underlying and reconnect with **Connect market** if
+you want a different symbol. The browser requests the latest 500 ticks from
 Deriv's public WebSocket API and aggregates them into locally generated
 five-second OHLC candles. The live chart, tick activity, VPA patterns, and
 pre-trade checklist update as new candles close.
 
-The public market feed needs no token. A trade-scoped PAT is required to load
-accounts and authenticate the trading connection. The PAT stays in page memory
-only and is cleared after the authenticated WebSocket is connected. The bot
+The public market feed and VPA dashboard need no account login or token. To
+place live orders, a trade-scoped PAT is required to load accounts and
+authenticate the trading connection. The PAT stays in page memory only and is
+cleared after the authenticated WebSocket is connected. The bot
 defaults to a demo account, 0.35 stake in account currency, 5-second contract
 duration, one order per rolling hour, and one matching VPA rule. You must set a
 daily bot-loss stop before starting. Real-account selection requires an
