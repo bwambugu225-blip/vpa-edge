@@ -97,7 +97,6 @@
             <div><label for="currency-readout">Account currency</label><input id="currency-readout" value="From account" readonly></div>
             <div><label for="duration">Contract expiry</label><input id="duration" type="number" min="1" step="1" value="5"></div>
             <div><label for="duration-unit">Expiry unit</label><select id="duration-unit"><option value="s" selected>Seconds</option><option value="t">Ticks</option><option value="m">Minutes</option></select></div>
-            <div><label for="max-trades">Max orders / rolling hour</label><input id="max-trades" type="number" min="1" max="60" step="1" value="1"></div>
             <div><label for="daily-loss">Daily bot loss stop</label><input id="daily-loss" type="number" min="0.01" step="0.01" placeholder="Required"></div>
             <div><label for="min-rules">Required matching VPA rules</label><select id="min-rules"><option value="1">1 rule</option><option value="2">2 rules</option><option value="3">3 rules</option></select></div>
           </div>
@@ -114,11 +113,11 @@
           <p id="bot-status" class="muted" role="status">Live market data starts automatically. Load a trade-scoped PAT only when you are ready to authorize trading.</p>
           <div class="bot-summary">
             <span>BOT NET P/L TODAY <b id="bot-pnl">0.00</b></span>
-            <span>ORDERS THIS HOUR <b id="hourly-count">0 / 1</b></span>
+            <span>ORDERS PAST HOUR <b id="hourly-count">0</b></span>
             <span>OPEN BOT CONTRACT <b id="open-contract">None</b></span>
           </div>
           <div id="trade-log" class="trade-log" aria-live="polite"></div>
-          <p class="fine-print">No martingale. A new order requires a fresh completed-candle VPA signal, an available hourly slot, and no open bot contract. The daily stop tracks this bot's realized P/L in this browser profile; it cannot account for manual trades on Deriv. Never use a stake you cannot afford to lose.</p>
+          <p class="fine-print">Unlimited entries; only one bot contract can be open at a time. A new order requires a fresh completed-candle VPA signal and the prior contract to settle. The daily stop tracks this bot's realized P/L in this browser profile; it cannot account for manual trades on Deriv. Never use a stake you cannot afford to lose.</p>
         </article>
       </section>
 

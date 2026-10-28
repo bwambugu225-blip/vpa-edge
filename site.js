@@ -18,7 +18,7 @@ const elements = Object.fromEntries([
   "chart-empty", "candle-chart", "ohlc", "signal-chip", "signal-direction",
   "analysis-reason", "analysis-quality", "rule-list", "checklist", "pat",
   "validate-pat", "account-status", "account", "stake", "currency-readout",
-  "duration", "duration-unit", "max-trades", "daily-loss", "min-rules",
+  "duration", "duration-unit", "daily-loss", "min-rules",
   "real-confirm", "start-bot", "stop-bot", "bot-status-chip", "bot-status",
   "bot-pnl", "hourly-count", "open-contract", "trade-log", "recover-contract",
   "reconcile-pending"
@@ -214,8 +214,7 @@ function renderTradingState() {
     : `0.00 ${account?.currency ?? ""}`;
   const now = Date.now();
   const trades = tradingLedger ? recentBotTrades(tradingLedger, now) : [];
-  elements["hourly-count"].textContent =
-    `${trades.length} / ${elements["max-trades"].value || 1}`;
+  elements["hourly-count"].textContent = String(trades.length);
   const openContract = tradingLedger?.openContract;
   elements["open-contract"].textContent = !openContract ? "None"
     : openContract.contractId ? `#${openContract.contractId} · ${openContract.status ?? "OPEN"}`
@@ -226,7 +225,7 @@ function renderTradingState() {
   elements.pat.disabled = Boolean(botBusy || (openContract && tradingClient?.isConnected));
   for (const control of [
     elements.stake, elements.duration, elements["duration-unit"],
-    elements["max-trades"], elements["daily-loss"], elements["min-rules"],
+    elements["daily-loss"], elements["min-rules"],
     elements["real-confirm"]
   ]) {
     control.disabled = botBusy;
@@ -401,9 +400,6 @@ async function maybePlaceOrder(candle, candles) {
     return;
   }
   const limitReason = getTradingLimitReason({
-    now: Date.now(),
-    tradeTimes: tradingLedger.tradeTimes,
-    maxTradesPerHour: botConfig.maxTradesPerHour,
     realizedLoss: Math.max(0, -tradingLedger.realizedPnl),
     dailyLossLimit: botConfig.dailyLossLimit,
     hasOpenTrade: Boolean(tradingLedger.openContract)
@@ -709,7 +705,6 @@ elements["start-bot"].addEventListener("click", async () => {
     stake: Number(elements.stake.value),
     duration: Number(elements.duration.value),
     durationUnit: elements["duration-unit"].value,
-    maxTradesPerHour: Number(elements["max-trades"].value),
     dailyLossLimit: Number(elements["daily-loss"].value),
     minimumRuleCount: Number(elements["min-rules"].value),
     realAccountConfirmed: elements["real-confirm"].checked,
@@ -731,7 +726,7 @@ elements["start-bot"].addEventListener("click", async () => {
       throw new Error("Load accounts with a trade-scoped PAT first.");
     }
     if (account.account_type === "real" &&
-        !window.confirm(`FINAL CHECK: Start automatic trading on REAL account ${account.account_id} using ${config.stake} ${config.currency} per order, ${config.duration} ${config.durationUnit === "s" ? "seconds" : config.durationUnit === "t" ? "ticks" : "minutes"} expiry, ${config.maxTradesPerHour} max order(s)/hour, and ${config.dailyLossLimit} ${config.currency} daily bot-loss stop?`)) {
+        !window.confirm(`FINAL CHECK: Start automatic trading on REAL account ${account.account_id} using ${config.stake} ${config.currency} per order, ${config.duration} ${config.durationUnit === "s" ? "seconds" : config.durationUnit === "t" ? "ticks" : "minutes"} expiry, and ${config.dailyLossLimit} ${config.currency} daily bot-loss stop?`)) {
       return;
     }
 
@@ -861,7 +856,7 @@ elements["stop-bot"].addEventListener("click", () => {
 
 for (const control of [
   elements.stake, elements.duration, elements["duration-unit"],
-  elements["max-trades"], elements["daily-loss"], elements["min-rules"]
+  elements["daily-loss"], elements["min-rules"]
 ]) {
   control.addEventListener("input", renderTradingState);
   control.addEventListener("change", renderTradingState);

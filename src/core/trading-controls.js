@@ -15,10 +15,6 @@ export function validateTradingConfig(config) {
       !["t", "s", "m"].includes(config.durationUnit)) {
     throw new RangeError("Choose a valid contract duration and unit.");
   }
-  if (!Number.isSafeInteger(config.maxTradesPerHour) ||
-      config.maxTradesPerHour < 1 || config.maxTradesPerHour > 60) {
-    throw new RangeError("Maximum orders per hour must be between 1 and 60.");
-  }
   if (!Number.isFinite(config.dailyLossLimit) || config.dailyLossLimit <= 0) {
     throw new RangeError("Set a daily loss stop greater than zero.");
   }
@@ -39,18 +35,11 @@ export function shouldPlaceFromSignal(analysis, minimumRuleCount) {
 }
 
 export function getTradingLimitReason({
-  now,
-  tradeTimes,
-  maxTradesPerHour,
   realizedLoss,
   dailyLossLimit,
   hasOpenTrade
 }) {
   if (hasOpenTrade) return "Waiting for the current contract to settle.";
   if (realizedLoss >= dailyLossLimit) return "Daily loss stop reached; bot halted.";
-  const recentTrades = tradeTimes.filter((timestamp) => now - timestamp < 60 * 60 * 1000);
-  if (recentTrades.length >= maxTradesPerHour) {
-    return "Hourly order limit reached; waiting for the rolling hour to pass.";
-  }
   return null;
 }

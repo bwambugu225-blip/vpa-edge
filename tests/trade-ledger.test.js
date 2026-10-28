@@ -27,14 +27,12 @@ test("validates mandatory account, stake, duration, and risk controls", () => {
     stake: 0.35,
     duration: 5,
     durationUnit: "s",
-    maxTradesPerHour: 1,
     dailyLossLimit: 10,
     minimumRuleCount: 1,
     realAccountConfirmed: false
   };
   assert.equal(validateTradingConfig(config), true);
   assert.throws(() => validateTradingConfig({ ...config, dailyLossLimit: 0 }), /daily loss stop/);
-  assert.throws(() => validateTradingConfig({ ...config, maxTradesPerHour: 61 }), /between 1 and 60/);
   assert.throws(() => validateTradingConfig({ ...config, accountType: "real" }), /real-account/);
 });
 
@@ -78,7 +76,7 @@ test("persists daily realized bot P/L and resets it at UTC date boundary", () =>
   assert.equal(loadTradingLedger(storage, "CR12345", now + 86400000).realizedPnl, 0);
 });
 
-test("reserves order limits before sending a buy and confirms only an accepted contract", () => {
+test("allows another order after settlement while blocking duplicate open contracts", () => {
   const now = Date.UTC(2026, 9, 27, 12);
   const initial = createTradingLedger("CR12345", now);
   const reserved = reserveBotPurchase(initial, {
@@ -104,23 +102,32 @@ test("reserves order limits before sending a buy and confirms only an accepted c
     timestamp: now + 5000,
     candleTimestamp: now
   }), /already pending or open/);
+  const settled = recordBotSettlement(confirmed, {
+    contractId: 321,
+    profit: 0.2,
+    timestamp: now + 10000
+  });
+  assert.equal(settled.settled, true);
+  const secondOrder = reserveBotPurchase(settled.ledger, {
+    direction: "bullish",
+    stake: 0.35,
+    timestamp: now + 15000,
+    candleTimestamp: now + 10000
+  });
+  assert.equal(secondOrder.tradeTimes.length, 2);
+  assert.equal(secondOrder.openContract.status, "BUY_PENDING");
 });
 
-test("rolling-hour order limit, active contract, and daily loss stop block orders", () => {
+test("trade count is informational while open contracts and daily loss stop block orders", () => {
   const now = 10000000;
-  assert.equal(recentBotTrades({
-    tradeTimes: [now - 1000, now - 3600001, now + 1]
-  }, now).length, 1);
+  const manyTrades = Array.from({ length: 500 }, (_, index) => now - index * 1000);
+  assert.equal(recentBotTrades({ tradeTimes: manyTrades }, now).length, 500);
   const common = {
-    now,
-    tradeTimes: [now - 1000],
-    maxTradesPerHour: 1,
     realizedLoss: 0,
     dailyLossLimit: 1,
     hasOpenTrade: false
   };
-  assert.match(getTradingLimitReason(common), /Hourly order limit/);
+  assert.equal(getTradingLimitReason(common), null);
   assert.match(getTradingLimitReason({ ...common, hasOpenTrade: true }), /current contract/);
   assert.match(getTradingLimitReason({ ...common, realizedLoss: 1 }), /Daily loss stop/);
-  assert.equal(getTradingLimitReason({ ...common, tradeTimes: [] }), null);
 });

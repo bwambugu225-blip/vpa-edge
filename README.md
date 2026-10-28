@@ -28,8 +28,10 @@ place live orders, a trade-scoped PAT is required to load accounts and
 authenticate the trading connection. The PAT stays in page memory only and is
 cleared after the authenticated WebSocket is connected. The bot
 defaults to a demo account, 0.35 stake in account currency, 5-second contract
-duration, one order per rolling hour, and one matching VPA rule. You must set a
-daily bot-loss stop before starting. Real-account selection requires an
+duration, and one matching VPA rule. There is no hourly order cap; the bot
+waits for each contract to settle before placing another order and continues
+only while it receives new qualifying VPA signals. You must set a daily
+bot-loss stop before starting. Real-account selection requires an
 acknowledgement and an additional confirmation.
 
 Starting the bot authorizes automatic Rise/Fall contracts on new completed-bar
