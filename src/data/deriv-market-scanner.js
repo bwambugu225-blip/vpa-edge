@@ -8,6 +8,12 @@ import {
 const REQUEST_TIMEOUT_MS = 20000;
 const MAX_BUFFERED_TICKS = 1000;
 const DEFAULT_REQUEST_INTERVAL_MS = 350;
+const INACTIVITY_TIMEOUT_MS = 90000;
+const STABLE_CONNECTION_MS = 30000;
+
+function isTransientConnectionError(message) {
+  return /rate.?limit|temporar|timed? out|connection|server|unavailable|too many requests/i.test(message);
+}
 
 function durationInSeconds(value) {
   const match = /^(\d+(?:\.\d+)?)([smhd])$/.exec(String(value ?? ""));
@@ -46,6 +52,9 @@ export class DerivMarketScanner {
     this.socket = null;
     this.retryTimer = null;
     this.requestTimer = null;
+    this.inactivityTimer = null;
+    this.stabilityTimer = null;
+    this.lastMessageAt = 0;
     this.stopped = true;
     this.attempt = 0;
     this.nextRequestId = 1;
@@ -76,6 +85,7 @@ export class DerivMarketScanner {
 
   stop() {
     this.stopped = true;
+    this.clearConnectionTimers();
     if (this.retryTimer !== null) clearTimeout(this.retryTimer);
     this.retryTimer = null;
     this.clearPending();
@@ -84,6 +94,48 @@ export class DerivMarketScanner {
     if (socket && socket.readyState < 2) socket.close();
     this.status = "disconnected";
     this.publish();
+  }
+
+  reconnectNow(error = "Network changed; reconnecting market scanner.") {
+    if (this.stopped) return;
+    this.clearConnectionTimers();
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    const socket = this.socket;
+    this.socket = null;
+    this.clearPending();
+    if (socket && socket.readyState < 2) socket.close();
+    this.status = "reconnecting";
+    this.error = error;
+    this.publish();
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      this.markets.clear();
+      this.connect();
+    }, 0);
+  }
+
+  reconnectIfStale() {
+    if (this.stopped) return;
+    const socketOpen = this.socket?.readyState === 1;
+    if (!socketOpen || Date.now() - this.lastMessageAt > INACTIVITY_TIMEOUT_MS) {
+      this.reconnectNow("Market scanner was idle; reconnecting.");
+    }
+  }
+
+  clearConnectionTimers() {
+    for (const key of ["inactivityTimer", "stabilityTimer"]) {
+      if (this[key] !== null) clearTimeout(this[key]);
+      this[key] = null;
+    }
+  }
+
+  armInactivityTimer(socket) {
+    if (this.inactivityTimer !== null) clearTimeout(this.inactivityTimer);
+    this.inactivityTimer = setTimeout(() => {
+      if (socket !== this.socket || this.stopped) return;
+      this.disconnect(socket, "Market scanner stopped updating; reconnecting.");
+    }, INACTIVITY_TIMEOUT_MS);
   }
 
   getSnapshot() {
@@ -129,30 +181,42 @@ export class DerivMarketScanner {
     this.socket = socket;
     socket.onopen = () => {
       if (socket !== this.socket) return;
+      this.lastMessageAt = Date.now();
       this.status = "loading_markets";
       this.publish();
+      this.armInactivityTimer(socket);
       this.sendRequest({
         active_symbols: "brief",
         contract_type: ["CALL", "PUT"]
       }, "active_symbols");
     };
     socket.onmessage = (event) => {
-      if (socket === this.socket) this.handleMessage(event.data);
+      if (socket === this.socket) {
+        this.lastMessageAt = Date.now();
+        this.armInactivityTimer(socket);
+        this.handleMessage(event.data);
+      }
     };
     socket.onerror = () => {
-      if (socket === this.socket && !this.stopped) {
-        this.status = "reconnecting";
-        this.error = "Scanner connection interrupted; reconnecting.";
-        this.publish();
-      }
+      this.disconnect(socket, "Scanner connection interrupted; reconnecting.");
     };
     socket.onclose = () => {
       if (socket === this.socket && !this.stopped) {
         this.socket = null;
+        this.clearConnectionTimers();
         this.clearPending();
         this.scheduleReconnect("Scanner connection closed; reconnecting.");
       }
     };
+  }
+
+  disconnect(socket, error) {
+    if (socket !== this.socket || this.stopped) return;
+    this.socket = null;
+    this.clearConnectionTimers();
+    this.clearPending();
+    if (socket.readyState < 2) socket.close();
+    this.scheduleReconnect(error);
   }
 
   sendRequest(payload, type, symbol = null) {
@@ -183,10 +247,10 @@ export class DerivMarketScanner {
       if (!this.pending.has(requestId)) return;
       this.pending.delete(requestId);
       if (request.type === "active_symbols") {
-        this.fail("Timed out while discovering Deriv markets.");
+        this.disconnect(this.socket, "Timed out while discovering Deriv markets.");
         return;
       }
-      this.markMarketError(request.symbol, `Timed out loading ${request.type.replace("_", " ")}.`);
+      this.disconnect(this.socket, `Timed out loading ${request.type.replace("_", " ")}.`);
     }, REQUEST_TIMEOUT_MS);
     this.lastRequestAt = Date.now();
     try {
@@ -194,11 +258,7 @@ export class DerivMarketScanner {
     } catch (error) {
       clearTimeout(request.timeout);
       this.pending.delete(requestId);
-      if (request.type === "active_symbols") {
-        this.fail(`Could not request Deriv markets: ${error.message}`);
-      } else {
-        this.markMarketError(request.symbol, `Could not request market data: ${error.message}`);
-      }
+      this.disconnect(this.socket, `Could not send market data request: ${error.message}`);
     }
     if (this.requestQueue.length) {
       if (this.requestIntervalMs === 0) this.flushRequests();
@@ -228,7 +288,8 @@ export class DerivMarketScanner {
       }
       this.finishRequest(message.req_id);
       const reason = String(message.error.message ?? "Deriv rejected a scanner request.");
-      if (request.type === "active_symbols") this.fail(reason);
+      if (isTransientConnectionError(reason)) this.disconnect(this.socket, reason);
+      else if (request.type === "active_symbols") this.fail(reason);
       else this.markMarketError(request.symbol, reason);
       return;
     }
@@ -283,7 +344,6 @@ export class DerivMarketScanner {
       this.fail("Deriv returned no open, unsuspended CALL/PUT markets.");
       return;
     }
-    this.attempt = 0;
     this.status = "loading_history";
     this.publish();
   }
@@ -426,6 +486,15 @@ export class DerivMarketScanner {
         ? `${snapshot.errorCount} market request(s) failed; scanner is incomplete.${firstMarketError ? ` First error: ${firstMarketError}` : ""}`
         : "No open market supports the selected Rise/Fall expiry.";
     }
+    if (this.status === "streaming" && this.stabilityTimer === null) {
+      this.stabilityTimer = setTimeout(() => {
+        if (this.status === "streaming") this.attempt = 0;
+        this.stabilityTimer = null;
+      }, STABLE_CONNECTION_MS);
+    } else if (this.status !== "streaming" && this.stabilityTimer !== null) {
+      clearTimeout(this.stabilityTimer);
+      this.stabilityTimer = null;
+    }
     this.publish();
   }
 
@@ -433,6 +502,7 @@ export class DerivMarketScanner {
     if (this.stopped || this.retryTimer !== null) return;
     this.status = "reconnecting";
     this.error = error;
+    this.clearConnectionTimers();
     this.publish();
     const delay = Math.min(30000, 1000 * (2 ** Math.min(this.attempt, 5)));
     this.attempt += 1;
@@ -446,6 +516,9 @@ export class DerivMarketScanner {
 
   fail(error) {
     this.stopped = true;
+    this.clearConnectionTimers();
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+    this.retryTimer = null;
     this.clearPending();
     const socket = this.socket;
     this.socket = null;

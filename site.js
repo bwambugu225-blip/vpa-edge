@@ -538,12 +538,16 @@ function renderScanner(snapshot) {
     startMarket(chartSymbolForSelection());
   }
   refreshTradingControls();
-  if (snapshot.status !== "streaming" && (botRunning || startAttemptPending)) {
-    stopBot(snapshot.error || "Market scanner disconnected; automatic orders paused.", "error");
+  if (botRunning && (!snapshot.ready || snapshot.status !== "streaming")) {
+    setBotStatus("Bot paused while the market scanner reconnects. No new orders will be sent.");
+  } else if (botRunning && snapshot.ready && snapshot.status === "streaming" &&
+      botStatusMessage.startsWith("Bot paused while the market scanner reconnects")) {
+    setBotStatus("Market scanner is live again. Bot is watching for fresh reversal signals.");
   }
 }
 
 function handleScannedCandle({ symbol, candle, candles }) {
+  if (!latestScannerSnapshot?.ready || latestScannerSnapshot.status !== "streaming") return;
   if (botRunning && botConfig?.marketSelection !== ALL_MARKETS &&
       botConfig?.marketSelection !== symbol) return;
   void maybePlaceOrder(symbol, candle, candles);
@@ -902,6 +906,17 @@ window.addEventListener("beforeunload", () => {
   if (feed) feed.stop();
   scanner?.stop();
   if (tradingClient) tradingClient.close();
+});
+
+window.addEventListener("online", () => {
+  feed?.reconnectNow();
+  scanner?.reconnectNow();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  feed?.reconnectIfStale();
+  scanner?.reconnectIfStale();
 });
 
 elements.account.disabled = true;

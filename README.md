@@ -25,6 +25,10 @@ that both CALL and PUT contracts support 15 seconds, imports up to 500 ticks
 per eligible symbol, and streams them over one public WebSocket. Chart and
 scanner feeds build 15-second OHLC candles. If a market request fails, bot
 start stays disabled until market discovery completes successfully.
+Both public feeds reconnect automatically with increasing backoff after
+connection loss, retain the displayed chart during recovery, and refresh tick
+history when the socket returns. Bringing a suspended tab back online triggers
+a stale-connection check; no page reload is needed.
 
 The public market feed and VPA dashboard need no account login or token. To
 place live orders, a trade-scoped PAT is required to load accounts and

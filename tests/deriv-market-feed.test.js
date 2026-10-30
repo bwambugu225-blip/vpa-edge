@@ -97,3 +97,36 @@ test("stops and reports an explicit Deriv error response", () => {
   assert.match(updates.at(-1).error, /Invalid symbol/);
   assert.equal(feed.stopped, true);
 });
+
+test("reconnects after a dropped socket without clearing the displayed candles", async () => {
+  FakeWebSocket.instances = [];
+  const feed = new DerivMarketFeed({ WebSocketImpl: FakeWebSocket });
+  feed.start("R_100");
+  const firstSocket = FakeWebSocket.instances[0];
+  firstSocket.open();
+  firstSocket.message({
+    msg_type: "history",
+    history: { times: [100, 105, 110], prices: [1, 2, 3] }
+  });
+  const previousCandles = feed.getSnapshot().candles;
+  assert.ok(previousCandles.length > 0);
+
+  firstSocket.close();
+  assert.equal(feed.getSnapshot().status, "reconnecting");
+  assert.deepEqual(feed.getSnapshot().candles, previousCandles);
+
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  assert.equal(FakeWebSocket.instances.length, 2);
+  const secondSocket = FakeWebSocket.instances[1];
+  secondSocket.open();
+  assert.equal(feed.attempt, 1);
+  assert.deepEqual(feed.getSnapshot().candles, previousCandles);
+  secondSocket.message({
+    msg_type: "history",
+    history: { times: [100, 105, 110], prices: [1, 2, 3] }
+  });
+  assert.equal(feed.getSnapshot().status, "streaming");
+  assert.equal(feed.getSnapshot().lastQuote, 3);
+  assert.deepEqual(feed.getSnapshot().candles, previousCandles);
+  feed.stop();
+});

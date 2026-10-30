@@ -15,6 +15,10 @@ market data fallback.
   CALL/PUT, checks `contracts_for` for 15-second contracts, then seeds each
   eligible market with up to 500 ticks and streams its updates. Scanner
   requests are paced to stay within Deriv's documented WebSocket request budget.
+- Both public sockets reconnect automatically with increasing delay after
+  disconnects, detect stalled streams, and refresh market history without
+  requiring a page reload. The chart keeps its last candles while reconnecting.
+  Returning online or restoring a backgrounded tab triggers a connection check.
 - The website builds 15-second OHLC candles locally from tick epochs and quotes.
   Candle `volume` is the count of ticks and is identified as a tick activity
   proxy, never centralized traded volume.

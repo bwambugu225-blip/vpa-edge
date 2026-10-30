@@ -160,11 +160,35 @@ test("does not mark a partial market scan ready after a per-market API error", (
   const historyRequest = socket.sent.find((request) => request.ticks_history);
   socket.message({
     req_id: historyRequest.req_id,
-    error: { message: "Rate limit exceeded" }
+    error: { message: "Invalid market request" }
   });
   const snapshot = scanner.getSnapshot();
   assert.equal(snapshot.ready, false);
   assert.equal(snapshot.status, "error");
-  assert.match(snapshot.error, /Rate limit exceeded/);
+  assert.match(snapshot.error, /Invalid market request/);
+  scanner.stop();
+});
+
+test("reconnects automatically after a dropped scanner socket", async () => {
+  FakeWebSocket.instances = [];
+  const scanner = new DerivMarketScanner({
+    WebSocketImpl: FakeWebSocket,
+    requestIntervalMs: 0
+  });
+  scanner.start(15);
+  const firstSocket = FakeWebSocket.instances[0];
+  firstSocket.open();
+  firstSocket.close();
+  assert.equal(scanner.getSnapshot().status, "reconnecting");
+
+  const deadline = Date.now() + 5000;
+  while (FakeWebSocket.instances.length < 2 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.ok(FakeWebSocket.instances.length >= 2);
+  const reconnectedSocket = FakeWebSocket.instances.at(-1);
+  reconnectedSocket.open();
+  assert.equal(scanner.attempt, 1);
+  assert.equal(reconnectedSocket.sent[0].active_symbols, "brief");
   scanner.stop();
 });
