@@ -132,10 +132,10 @@ test("discovers open markets, filters unsupported expiries and imports 500 live 
   assert.equal(scanner.getSnapshot().ready, true);
   assert.equal(scanner.getSnapshot().readyCount, 1);
   assert.equal(scanner.getSnapshot().unsupportedCount, 1);
-  socket.message({ msg_type: "tick", tick: { symbol: "R_100", epoch: 115, quote: 7 } });
+  socket.message({ msg_type: "tick", tick: { symbol: "R_100", epoch: 120, quote: 7 } });
   assert.equal(closed.length, 1);
   assert.equal(closed[0].symbol, "R_100");
-  assert.equal(closed[0].candle.timestamp, 110000);
+  assert.equal(closed[0].candle.timestamp, 105000);
   scanner.stop();
 });
 

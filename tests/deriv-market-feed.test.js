@@ -35,7 +35,7 @@ class FakeWebSocket {
   }
 }
 
-test("requests 500 public ticks and builds five-second history bars", () => {
+test("requests 500 public ticks and builds 15-second history bars", () => {
   FakeWebSocket.instances = [];
   const completed = [];
   const feed = new DerivMarketFeed({
@@ -70,15 +70,15 @@ test("requests 500 public ticks and builds five-second history bars", () => {
   assert.deepEqual(snapshot.candles.slice(0, 2).map((candle) => [
     candle.timestamp, candle.open, candle.high, candle.low, candle.close, candle.volume
   ]), [
-    [100000, 1, 3, 1, 2, 3],
-    [105000, 4, 5, 4, 5, 2]
+    [90000, 1, 3, 1, 2, 3],
+    [105000, 4, 6, 4, 6, 3]
   ]);
   assert.equal(snapshot.candles.at(-1).isClosed, false);
   assert.deepEqual(completed, []);
 
-  socket.message({ msg_type: "tick", tick: { symbol: "R_100", epoch: 115, quote: 7 } });
+  socket.message({ msg_type: "tick", tick: { symbol: "R_100", epoch: 120, quote: 7 } });
   assert.equal(completed.length, 1);
-  assert.equal(completed[0].timestamp, 110000);
+  assert.equal(completed[0].timestamp, 105000);
   feed.stop();
 });
 

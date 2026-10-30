@@ -10,7 +10,12 @@ import {
   reserveBotPurchase,
   saveTradingLedger
 } from "../src/core/trade-ledger.js";
-import { getTradingLimitReason, shouldPlaceFromSignal, validateTradingConfig } from "../src/core/trading-controls.js";
+import {
+  getBotToggleState,
+  getTradingLimitReason,
+  shouldPlaceFromSignal,
+  validateTradingConfig
+} from "../src/core/trading-controls.js";
 
 function makeStorage() {
   const values = new Map();
@@ -29,13 +34,32 @@ test("validates mandatory account, stake, duration, and risk controls", () => {
     durationUnit: "s",
     dailyLossLimit: 10,
     minimumRuleCount: 1,
-    realAccountConfirmed: false
+    realAccountConfirmed: false,
+    marketSelection: "ALL"
   };
   assert.equal(validateTradingConfig(config), true);
   assert.throws(() => validateTradingConfig({ ...config, dailyLossLimit: 0 }), /daily loss stop/);
   assert.throws(() => validateTradingConfig({ ...config, accountType: "real" }), /real-account/);
-  assert.throws(() => validateTradingConfig({ ...config, duration: 10 }), /15, 30, or 60/);
-  assert.throws(() => validateTradingConfig({ ...config, duration: 10 }), /15, 30, or 60/);
+  assert.throws(() => validateTradingConfig({ ...config, duration: 10 }), /fixed 15-second/);
+  assert.throws(() => validateTradingConfig({ ...config, marketSelection: "invalid symbol" }), /valid market symbol/);
+});
+
+test("single bot toggle stays actionable while running or starting", () => {
+  assert.deepEqual(getBotToggleState({
+    botRunning: false,
+    startAttemptPending: false,
+    canStart: false
+  }), { disabled: true, label: "Start bot" });
+  assert.deepEqual(getBotToggleState({
+    botRunning: false,
+    startAttemptPending: true,
+    canStart: false
+  }), { disabled: false, label: "Cancel start" });
+  assert.deepEqual(getBotToggleState({
+    botRunning: true,
+    startAttemptPending: false,
+    canStart: false
+  }), { disabled: false, label: "Stop bot" });
 });
 
 test("only starts on a directional signal with the configured VPA confluence", () => {

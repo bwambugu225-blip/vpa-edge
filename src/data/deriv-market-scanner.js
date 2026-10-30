@@ -366,7 +366,7 @@ export class DerivMarketScanner {
       const accepted = market.aggregator.addTick({ epoch: tick.epoch, quote: tick.quote });
       if (!accepted) return;
     } catch (error) {
-      this.markMarketError(market.symbol, `Could not build a 5-second candle: ${error.message}`);
+      this.markMarketError(market.symbol, `Could not build a 15-second candle: ${error.message}`);
       return;
     }
     market.lastQuote = Number(tick.quote);

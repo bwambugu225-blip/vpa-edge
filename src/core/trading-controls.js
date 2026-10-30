@@ -14,15 +14,26 @@ export function validateTradingConfig(config) {
   if (!Number.isFinite(config.dailyLossLimit) || config.dailyLossLimit <= 0) {
     throw new RangeError("Set a daily loss stop greater than zero.");
   }
-  if (!Number.isSafeInteger(config.duration) || ![15, 30, 60].includes(config.duration) ||
+  if (config.duration !== 15 ||
       config.durationUnit !== "s") {
-    throw new RangeError("Choose a 15, 30, or 60 second contract expiry.");
+    throw new RangeError("The bot uses a fixed 15-second contract expiry.");
+  }
+  if (config.marketSelection !== "ALL" &&
+      (typeof config.marketSelection !== "string" ||
+       !/^\w{2,30}$/.test(config.marketSelection))) {
+    throw new TypeError("Choose all eligible markets or a valid market symbol.");
   }
   if (!Number.isSafeInteger(config.minimumRuleCount) ||
       config.minimumRuleCount < 1 || config.minimumRuleCount > 8) {
     throw new RangeError("Choose between 1 and 8 matching VPA rules.");
   }
   return true;
+}
+
+export function getBotToggleState({ botRunning, startAttemptPending, canStart }) {
+  if (botRunning) return { disabled: false, label: "Stop bot" };
+  if (startAttemptPending) return { disabled: false, label: "Cancel start" };
+  return { disabled: !canStart, label: "Start bot" };
 }
 
 export function shouldPlaceFromSignal(analysis, minimumRuleCount) {

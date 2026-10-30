@@ -17,82 +17,54 @@
     <main>
       <section class="hero">
         <div>
-          <p class="eyebrow">PRICE ACTION, WITH CONTEXT</p>
-          <h1>Find the reversal.<br><span>Control every order.</span></h1>
-          <p class="hero-copy">Live Deriv prices, multi-market scanning, RSI and Bollinger Band confirmation, and explicit account and loss controls.</p>
+          <p class="eyebrow">DERIV LIVE MARKETS</p>
+          <h1>Live Rise/Fall<br><span>trading controls.</span></h1>
+          <p class="hero-copy">Select a market or let the bot scan every eligible live market. 15-second candles and contracts.</p>
         </div>
         <div class="feed-controls">
-          <label for="symbol">Chart underlying (bot scans all eligible markets)</label>
-          <div class="control-row">
-            <input id="symbol" value="R_100" autocomplete="off" spellcheck="false">
-            <button id="start" type="button">Connect market</button>
-            <button id="stop" type="button" class="button-secondary" disabled>Stop</button>
-          </div>
+          <label for="symbol">Market</label>
+          <select id="symbol"><option value="ALL" selected>All eligible markets</option></select>
           <p id="market-status" class="muted" role="status">Ready to connect to Deriv public data</p>
         </div>
       </section>
 
-      <section class="metrics" aria-label="Market summary">
+      <section class="metrics" aria-label="Live market summary">
         <article class="metric-card"><span>LAST PRICE</span><strong id="price">—</strong><small id="market-symbol">No market selected</small></article>
-        <article class="metric-card"><span>CHART TICKS</span><strong id="ticks">0 <small>/ 500</small></strong><small>Initial history request</small></article>
-        <article class="metric-card"><span>COMPLETED BARS</span><strong id="bars">0</strong><small>5-second OHLC</small></article>
-        <article class="metric-card"><span>RELATIVE ACTIVITY</span><strong id="activity-metric">—</strong><small>Tick-count proxy</small></article>
+        <article class="metric-card"><span>IMPORTED TICKS</span><strong id="ticks">0 <small>/ 500</small></strong><small>Live initial history</small></article>
+        <article class="metric-card"><span>COMPLETED CANDLES</span><strong id="bars">0</strong><small>15-second OHLC</small></article>
       </section>
 
       <section class="panel scanner-panel" aria-label="All-market scanner">
         <div class="panel-heading">
-          <div><p class="eyebrow">DERIV LIVE UNIVERSE</p><h2>First qualifying setup across eligible markets</h2></div>
-          <span class="timeframe-chip">5 SEC BARS · LIVE ONLY</span>
+          <div><p class="eyebrow">MARKET DATA</p><h2>Automatic market loading</h2></div>
+          <span class="timeframe-chip">15 SEC</span>
         </div>
         <div class="scanner-toolbar">
-          <p id="scanner-status" class="muted" role="status">Discovering open Deriv markets and checking contract availability…</p>
-          <button id="rescan-markets" type="button" class="button-secondary" disabled>Refresh scanner</button>
+          <p id="scanner-status" class="muted" role="status">Loading available Deriv markets automatically…</p>
+          <button id="rescan-markets" type="button" class="button-secondary" disabled>Refresh markets</button>
         </div>
-        <div class="scanner-signal">
-          <strong>Latest confirmed setup</strong>
-          <span id="scanner-signal">No qualifying setup yet. Orders use the first new confirmed setup after the bot starts.</span>
-        </div>
-        <div id="scanner-markets" class="scanner-markets" aria-live="polite"></div>
       </section>
 
       <section class="dashboard-grid">
         <article class="panel chart-panel">
           <div class="panel-heading">
-            <div><p class="eyebrow">LIVE MARKET</p><h2 id="chart-title">Waiting for feed</h2></div>
-            <span class="timeframe-chip">5 SEC</span>
+            <div><p class="eyebrow">LIVE CHART</p><h2 id="chart-title">Waiting for feed</h2></div>
+            <span class="timeframe-chip">15 SEC</span>
           </div>
-          <div id="chart" class="chart" aria-label="Recent five-second OHLC candles">
-            <div id="chart-empty" class="empty-state">Connect a market to build the live candle chart.</div>
-            <svg id="candle-chart" viewBox="0 0 760 280" role="img" aria-label="Five-second OHLC candle chart"></svg>
+          <div id="chart" class="chart" aria-label="Recent 15-second OHLC candles">
+            <div id="chart-empty" class="empty-state">Loading live candles…</div>
+            <svg id="candle-chart" viewBox="0 0 760 280" role="img" aria-label="15-second OHLC candle chart"></svg>
           </div>
           <div class="ohlc-strip">
             <span>LAST BAR OHLC</span>
             <b id="ohlc">—</b>
           </div>
         </article>
-
-        <article class="panel signal-panel">
-          <div class="panel-heading">
-            <div><p class="eyebrow">CHART MARKET ONLY</p><h2>RSI + Bollinger reversal setup</h2></div>
-            <span id="signal-chip" class="signal-chip neutral">WAITING</span>
-          </div>
-          <div id="signal-direction" class="signal-direction neutral">No signal yet</div>
-          <p id="analysis-reason" class="muted">Connect a market. The first 500 ticks are imported immediately.</p>
-          <p id="analysis-quality" class="quality-note"></p>
-          <div id="rule-list" class="rule-list"></div>
-        </article>
       </section>
 
       <section class="lower-grid">
-        <article class="panel checklist-panel">
-          <div class="panel-heading"><div><p class="eyebrow">BEFORE ANY DECISION</p><h2>Effort vs. result checklist</h2></div></div>
-          <div id="checklist" class="checklist">
-            <p class="muted">The checklist appears after the VPA baseline is ready.</p>
-          </div>
-        </article>
-
         <article class="panel account-panel">
-          <div class="panel-heading"><div><p class="eyebrow">OPTIONAL TRADING AUTHORIZATION</p><h2>Connect with PAT</h2></div><span class="lock-mark">MEMORY ONLY</span></div>
+          <div class="panel-heading"><div><p class="eyebrow">LIVE ACCOUNT</p><h2>Trading authorization</h2></div><span class="lock-mark">MEMORY ONLY</span></div>
           <label for="pat">Personal Access Token with trade scope</label>
           <div class="control-row">
             <input id="pat" name="deriv-pat-input" type="password" autocomplete="new-password" spellcheck="false" placeholder="Required to place orders">
@@ -105,15 +77,13 @@
 
         <article class="panel trading-panel">
           <div class="panel-heading">
-            <div><p class="eyebrow">AUTOMATION CONTROLS</p><h2>Binary reversal bot</h2></div>
+            <div><p class="eyebrow">AUTOMATION</p><h2>Rise/Fall bot</h2></div>
             <span id="bot-status-chip" class="signal-chip neutral">STOPPED</span>
           </div>
           <div class="settings-grid">
             <div><label for="stake">Stake per order</label><input id="stake" type="number" min="0.01" step="0.01" value="0.35"></div>
             <div><label for="currency-readout">Account currency</label><input id="currency-readout" value="From account" readonly></div>
-            <div><label for="expiry-seconds">Rise/Fall contract expiry</label><select id="expiry-seconds"><option value="15" selected>15 seconds · default</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select></div>
-            <div><label for="daily-loss">Daily bot loss stop</label><input id="daily-loss" type="number" min="0.01" step="0.01" placeholder="Required"></div>
-            <div><label for="min-rules">Required reversal confirmations</label><select id="min-rules"><option value="2" selected>2 patterns</option><option value="3">3 patterns</option><option value="4">4 patterns</option></select></div>
+            <div><label for="daily-loss">Daily loss stop (default 10)</label><input id="daily-loss" type="number" min="0.01" step="0.01" value="10"></div>
           </div>
           <label class="risk-check" for="real-confirm">
             <input id="real-confirm" type="checkbox">
@@ -121,23 +91,21 @@
           </label>
           <div class="trading-actions">
             <button id="start-bot" type="button" disabled>Start bot</button>
-            <button id="stop-bot" type="button" class="button-secondary" disabled>Stop new orders</button>
           </div>
           <button id="recover-contract" type="button" class="button-secondary recover-button" hidden>Reconnect to monitor open contract</button>
           <button id="reconcile-pending" type="button" class="button-secondary recover-button" hidden>Reconcile uncertain order after checking Deriv</button>
-          <p id="bot-status" class="muted" role="status">Reversal-only mode. Load a trade-scoped PAT when you are ready to authorize trading.</p>
+          <p id="bot-status" class="muted" role="status">Load a trade-scoped PAT to enable live trading.</p>
           <div class="bot-summary">
             <span>BOT NET P/L TODAY <b id="bot-pnl">0.00</b></span>
-            <span>ORDERS PAST HOUR <b id="hourly-count">0</b></span>
             <span>OPEN BOT CONTRACT <b id="open-contract">None</b></span>
           </div>
           <div id="trade-log" class="trade-log" aria-live="polite"></div>
-          <p class="fine-print">Entries require a completed five-second candle to reject a Bollinger Band with RSI oversold/overbought, plus matching VPA reversal evidence at support or resistance; conflicting signals are skipped. The scanner checks live open markets and excludes symbols without both Rise and Fall contracts for the selected expiry. It considers the first newly confirmed setup after the bot starts, then waits for each contract to settle. Unlimited entries; only one bot contract can be open at a time. The daily stop tracks this bot's realized P/L in this browser profile; it cannot account for manual trades on Deriv. These are unvalidated heuristics—not perfect reversals, a measured win rate, or a guarantee against losses. Never stake money you cannot afford to lose.</p>
+          <p class="fine-print">15-second candles and contracts. A completed-bar RSI/Bollinger and VPA reversal filter runs automatically; it is not a guaranteed or independently validated strategy. "All eligible markets" trades the first qualifying market signal. Only one bot contract is open at a time. Stop bot prevents future orders but does not cancel an open contract. The daily loss stop defaults to 10 account-currency units. Never stake money you cannot afford to lose.</p>
         </article>
       </section>
 
       <footer class="disclaimer">
-        <strong>Risk warning:</strong> Binary options are high risk and can lose the full stake. RSI/Bollinger and VPA reversals are unvalidated heuristics, not measured probabilities or guaranteed predictions. Live tick count is an activity proxy, not actual traded volume. By selecting Real and starting the bot you authorize automatic orders subject to the controls above. Stop prevents future bot orders; it does not cancel an already purchased contract. PATs are held only in page memory and are not saved to disk.
+        <strong>Risk warning:</strong> Binary options are high risk and can lose the full stake. RSI/Bollinger and VPA reversals are unvalidated heuristics, not measured probabilities or guaranteed predictions. Tick counts are an activity proxy, not actual traded volume. Selecting Real and starting the bot authorizes automatic orders. PATs are held only in page memory and are not saved to disk.
       </footer>
     </main>
     <script type="module" src="./site.js"></script>

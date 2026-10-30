@@ -17,37 +17,38 @@ Requires Node.js 18 or newer:
 npm.cmd start
 ```
 
-Open <http://127.0.0.1:5173>. The chart feed connects automatically using
-`R_100`; change the chart underlying and reconnect with **Connect market** to
-view another symbol. Separately, the scanner discovers open, unsuspended
-markets, checks that both CALL and PUT contracts support the selected expiry,
-then imports up to 500 ticks per eligible symbol and streams them over one
-public WebSocket. Both feeds aggregate live ticks into five-second OHLC bars.
-The scanner considers every eligible open market, not just the chart symbol;
-if a market request fails, bot start remains disabled until the scan is
-refreshed and complete.
+Open <http://127.0.0.1:5173>. Market data and the scanner start automatically.
+The market selector offers **All eligible markets** or an individual eligible
+symbol; the chart follows the selected symbol (or a representative live market
+in all-markets mode). The scanner discovers open, unsuspended markets, checks
+that both CALL and PUT contracts support 15 seconds, imports up to 500 ticks
+per eligible symbol, and streams them over one public WebSocket. Chart and
+scanner feeds build 15-second OHLC candles. If a market request fails, bot
+start stays disabled until market discovery completes successfully.
 
 The public market feed and VPA dashboard need no account login or token. To
 place live orders, a trade-scoped PAT is required to load accounts and
 authenticate the trading connection. The PAT stays in page memory only and is
 cleared after the authenticated WebSocket is connected. The bot defaults to a
-demo account, 0.35 stake in account currency, and a 15-second contract expiry;
-30 and 60 seconds are also selectable. The analysis bars remain five seconds.
-A setup requires a completed candle to reject a Bollinger Band after RSI enters
+demo account, 0.35 stake in account currency, 15-second candles and 15-second
+contracts. A setup requires a completed candle to reject a Bollinger Band after RSI enters
 the oversold/overbought zone, plus at least two matching VPA reversal patterns
-at support or resistance. Conflicting signals are skipped. The scanner
-considers the first newly qualifying setup after the bot starts, regardless of
-symbol. These conditions are heuristics, not measured win probabilities.
+at support or resistance. Conflicting signals are skipped. In all-markets mode,
+the scanner considers the first newly qualifying setup after the bot starts;
+choosing a symbol restricts entries to that market. These conditions are
+heuristics, not measured win probabilities.
 There is no hourly order cap; the bot waits for each contract to settle before
 placing another order and continues only while it receives new qualifying
-signals. You must set a daily bot-loss stop before starting. Real-account
-selection requires an acknowledgement and an additional confirmation.
+signals. The daily bot-loss stop defaults to 10 account-currency units and is
+editable. Real-account selection requires an acknowledgement and an additional
+confirmation.
 
 Starting the bot authorizes automatic Rise/Fall contracts on new completed-bar
 RSI/Bollinger and VPA-confirmed signals. The stake is capped by the requested
-amount; no martingale or retry-after-uncertain-buy behavior is used. **Stop new
-orders** prevents future bot entries but does not cancel an already purchased
-contract. The daily-loss ledger tracks this bot's realized contracts in the
+amount; no martingale or retry-after-uncertain-buy behavior is used. The single
+**Start bot / Stop bot** toggle remains available while running and offers
+**Cancel start** during connection setup. Stopping prevents future entries but
+does not cancel an already purchased contract. The daily-loss ledger tracks this bot's realized contracts in the
 browser profile and cannot include manual trades or other apps trading the
 same account. Do not rely on a browser-only tool as a guaranteed financial
 loss limit.

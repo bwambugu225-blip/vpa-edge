@@ -12,19 +12,20 @@ market data fallback.
 - The chart requests `ticks_history` with `count: 500`, `style: "ticks"`, and
   `subscribe: 1` for the selected chart symbol.
 - A second public connection requests open, unsuspended symbols that support
-  CALL/PUT, checks `contracts_for` for the selected 15-, 30-, or 60-second
-  duration, then seeds each eligible market with up to 500 ticks and streams
-  its updates. Scanner requests are paced to stay within Deriv's documented
-  WebSocket request budget.
-- The website builds five-second OHLC candles locally from tick epochs and quotes.
+  CALL/PUT, checks `contracts_for` for 15-second contracts, then seeds each
+  eligible market with up to 500 ticks and streams its updates. Scanner
+  requests are paced to stay within Deriv's documented WebSocket request budget.
+- The website builds 15-second OHLC candles locally from tick epochs and quotes.
   Candle `volume` is the count of ticks and is identified as a tick activity
   proxy, never centralized traded volume.
 - Both the VPA rules and the RSI(14)/Bollinger(20, 2 standard deviations)
   indicator use completed candles only. A reversal requires a band rejection
   following an oversold/overbought RSI reading plus VPA evidence at a key level.
-- The bot trades the first newly qualified scanner setup after it starts,
-  regardless of the chart's selected symbol. It only uses symbols where public
-  `contracts_for` reports both CALL and PUT for the configured expiry. A
+- The selector is populated automatically with all eligible markets and
+  supports all-markets mode or a single-market filter. The bot trades the first
+  newly qualified scanner setup after it starts in all-markets mode, or
+  restricts entries to the selected symbol. It only uses symbols where public
+  `contracts_for` reports both CALL and PUT for 15 seconds. A
   reconnect obtains fresh history; the bot pauses on scanner disconnection or
   an incomplete scan. **Refresh scanner** retries market discovery.
 
@@ -37,10 +38,9 @@ the returned authenticated trading WebSocket. The PAT stays in page memory
 only and is cleared after the authenticated socket opens. The one-time
 WebSocket URL is never displayed or persisted.
 
-Starting the bot is opt-in. It defaults to a demo account and 0.35 account
-currency stake and 15-second contract expiry (30 and 60 seconds are selectable).
-The chart/scanner candles remain five seconds. A positive daily bot-loss limit
-is mandatory. Real accounts require a risk acknowledgement and a browser
+Starting the bot is opt-in. It defaults to a demo account, 0.35 account
+currency stake, 15-second candles and contracts, and a daily bot-loss limit of
+10 account-currency units. Real accounts require a risk acknowledgement and a browser
 confirmation. Before enabling the bot, the site checks that the all-market
 scanner is ready, the account has no open portfolio contracts, and the balance
 covers the stake.
@@ -48,8 +48,7 @@ covers the stake.
 The bot requires a completed-bar Bollinger Band rejection with RSI turning out
 of an oversold/overbought reading, at least two matching VPA patterns at the
 relevant support/resistance level by default, and no conflicting directional
-evidence. The 15-second default expiry is configurable to 30 or 60 seconds and
-is independent of the five-second candle timeframe. This is a deterministic,
+evidence. The 15-second candle and contract intervals are fixed. This is a deterministic,
 unvalidated heuristic, not a probability or measured performance estimate.
 The bot requests a CALL (Rise) or PUT (Fall) proposal for the symbol that
 qualified, caps the buy price at the configured stake, and monitors settlement.
@@ -60,8 +59,9 @@ account and reconciles the result.
 
 The browser ledger tracks this bot's realized results. It cannot include
 manual trades or other software on the same account and is not a guaranteed
-server-side loss limit. **Stop new orders** prevents future bot entries but
-does not cancel an already purchased contract.
+server-side loss limit. The single **Start bot / Stop bot** toggle remains
+available while running and offers **Cancel start** during connection setup.
+Stopping prevents future entries but does not cancel an already purchased contract.
 
 ## Privacy and limitations
 
@@ -77,12 +77,11 @@ does not cancel an already purchased contract.
 ## Verify
 
 1. Run `npm.cmd start` and open <http://127.0.0.1:5173>.
-2. Connect a symbol such as `R_100`; confirm tick history loads and the chart
-   begins showing five-second candles.
-3. Wait for scanner markets to finish loading; verify open markets and
-   unsupported expiry counts.
+2. Confirm markets load automatically, 500 ticks are requested, and the chart
+   begins showing 15-second candles.
+3. Choose **All eligible markets** or a specific market in the selector.
 4. Load a trade-scoped PAT and select the demo account first.
-5. Set the required daily loss cap, confirm the account currency and stake,
-   choose the expiry, then select **Start bot**.
+5. Confirm the account currency and stake, adjust the default daily loss limit
+   if needed, then select **Start bot**. Use the same toggle to stop or cancel.
 6. Run `npm.cmd test` to verify Deriv requests, scanner filtering, indicator
    confirmation, candle aggregation, trading controls, and the risk ledger.

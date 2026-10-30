@@ -3,7 +3,7 @@ import { TickCandleAggregator } from "./tick-candle-aggregator.js";
 export const DERIV_PUBLIC_WS_URL = "wss://api.derivws.com/trading/v1/options/ws/public";
 export const DERIV_API_BASE_URL = "https://api.derivws.com";
 export const HISTORY_TICK_COUNT = 500;
-export const CANDLE_TIMEFRAME_SECONDS = 5;
+export const CANDLE_TIMEFRAME_SECONDS = 15;
 
 export class DerivMarketFeed {
   constructor({
@@ -174,7 +174,7 @@ export class DerivMarketFeed {
       const accepted = this.aggregator.addTick({ epoch: tick.epoch, quote: tick.quote });
       if (!accepted) return;
     } catch (error) {
-      this.fail(`Could not build a 5-second candle: ${error.message}`);
+      this.fail(`Could not build a 15-second candle: ${error.message}`);
       return;
     }
     this.lastQuote = Number(tick.quote);

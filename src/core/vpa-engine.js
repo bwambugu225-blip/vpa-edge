@@ -28,7 +28,7 @@ export function analyzeVpa(candles, { lookback = LOOKBACK } = {}) {
       rules: [],
       checklist: {},
       ready: false,
-      reason: "Waiting for a completed 5-second candle."
+      reason: "Waiting for a completed 15-second candle."
     };
   }
 

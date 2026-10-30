@@ -1,4 +1,4 @@
-const DEFAULT_TIMEFRAME_SECONDS = 5;
+const DEFAULT_TIMEFRAME_SECONDS = 15;
 
 export class TickCandleAggregator {
   constructor({ symbol, timeframeSeconds = DEFAULT_TIMEFRAME_SECONDS, maxCandles = 500 }) {

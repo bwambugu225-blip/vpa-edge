@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { TickCandleAggregator } from "../src/data/tick-candle-aggregator.js";
 
-test("aggregates ticks into aligned five-second OHLC bars with tick volume", () => {
+test("aggregates ticks into aligned 15-second OHLC bars with tick volume", () => {
   const aggregator = new TickCandleAggregator({ symbol: "R_100" });
   aggregator.addTick({ epoch: 100, quote: 10 });
   aggregator.addTick({ epoch: 102, quote: 12 });
@@ -12,7 +12,7 @@ test("aggregates ticks into aligned five-second OHLC bars with tick volume", () 
   const [closed, current] = aggregator.getCandles();
   assert.deepEqual(
     [closed.timestamp, closed.open, closed.high, closed.low, closed.close, closed.volume],
-    [100000, 10, 12, 9, 9, 3]
+    [90000, 10, 12, 9, 9, 3]
   );
   assert.equal(closed.isClosed, true);
   assert.equal(closed.volumeType, "tick");
@@ -23,12 +23,12 @@ test("aggregates ticks into aligned five-second OHLC bars with tick volume", () 
 
 test("ignores late ticks and limits retained completed candles", () => {
   const aggregator = new TickCandleAggregator({ symbol: "R_100", maxCandles: 2 });
-  for (const epoch of [0, 5, 10, 15]) {
+  for (const epoch of [0, 15, 30, 45]) {
     aggregator.addTick({ epoch, quote: epoch });
   }
   assert.equal(aggregator.addTick({ epoch: 5, quote: 100 }), false);
   assert.deepEqual(aggregator.getCandles().map((candle) => candle.timestamp), [
-    5000, 10000, 15000
+    15000, 30000, 45000
   ]);
 });
 
