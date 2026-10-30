@@ -25,7 +25,7 @@ test("validates mandatory account, stake, duration, and risk controls", () => {
     accountType: "demo",
     accountId: "CR12345",
     stake: 0.35,
-    duration: 5,
+    duration: 15,
     durationUnit: "s",
     dailyLossLimit: 10,
     minimumRuleCount: 1,
@@ -34,6 +34,8 @@ test("validates mandatory account, stake, duration, and risk controls", () => {
   assert.equal(validateTradingConfig(config), true);
   assert.throws(() => validateTradingConfig({ ...config, dailyLossLimit: 0 }), /daily loss stop/);
   assert.throws(() => validateTradingConfig({ ...config, accountType: "real" }), /real-account/);
+  assert.throws(() => validateTradingConfig({ ...config, duration: 10 }), /15, 30, or 60/);
+  assert.throws(() => validateTradingConfig({ ...config, duration: 10 }), /15, 30, or 60/);
 });
 
 test("only starts on a directional signal with the configured VPA confluence", () => {
@@ -61,8 +63,11 @@ test("persists daily realized bot P/L and resets it at UTC date boundary", () =>
     direction: "bullish",
     stake: 0.35,
     timestamp: now,
-    candleTimestamp: now - 5000
+    candleTimestamp: now - 5000,
+    symbol: "R_100"
   });
+  assert.equal(purchased.openContract.symbol, "R_100");
+  assert.equal(purchased.tradeLog[0].symbol, "R_100");
   const settled = recordBotSettlement(purchased, {
     contractId: 123,
     profit: -0.35,

@@ -62,6 +62,20 @@ button.button-secondary { border: 1px solid #3a4b55; background: #23333d; color:
 .metric-card strong { display: block; font: 600 21px system-ui, sans-serif; }
 .metric-card strong small { color: var(--muted); font: 12px Consolas, monospace; }
 .metric-card > small { display: block; margin-top: 4px; color: #81919a; font-size: 10px; }
+.scanner-panel { margin-bottom: 14px; }
+.scanner-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 10px 0; }
+.scanner-toolbar > .muted { margin: 0; }
+.scanner-toolbar button { min-height: 32px; }
+.scanner-signal { display: grid; gap: 4px; padding: 10px 11px; border-left: 2px solid var(--amber); background: #1c2a33; color: #c9d4d8; font-size: 11px; line-height: 1.5; }
+.scanner-signal strong { color: #e8bd73; font: 500 9px Consolas, monospace; text-transform: uppercase; }
+.scanner-markets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.scanner-row { display: grid; grid-template-columns: minmax(45px, .75fr) minmax(65px, 1fr) auto; gap: 4px 8px; align-items: center; padding: 7px 8px; border-radius: 4px; background: #121c24; color: #b7c3c9; font: 9px Consolas, monospace; }
+.scanner-row strong { color: #e4ecee; }
+.scanner-row > span:nth-child(2) { overflow: hidden; color: #82929a; text-overflow: ellipsis; white-space: nowrap; }
+.scanner-row > b { text-align: right; color: #d3dcdf; font-weight: 500; }
+.scanner-state { grid-column: 1 / -1; color: var(--amber); text-transform: uppercase; }
+.scanner-state.streaming { color: var(--green); }
+.scanner-state.unsupported, .scanner-state.error { color: var(--red); }
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(310px, .8fr); gap: 14px; }
 .panel { padding: 17px; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -124,12 +138,16 @@ select:focus { border-color: var(--green); }
   main { padding: 30px 18px 24px; }
   .hero { grid-template-columns: 1fr; gap: 21px; }
   .dashboard-grid { grid-template-columns: 1fr; }
+  .scanner-markets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .scanner-toolbar { align-items: flex-start; }
 }
 
 @media (max-width: 560px) {
   .metrics { grid-template-columns: 1fr 1fr; }
   .lower-grid { grid-template-columns: 1fr; }
   .settings-grid { grid-template-columns: 1fr 1fr; }
+  .scanner-markets { grid-template-columns: 1fr; }
+  .scanner-toolbar { flex-direction: column; }
   .topbar { height: 58px; }
   .connection-pill { font-size: 10px; }
   .control-row { flex-wrap: wrap; }

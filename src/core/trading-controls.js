@@ -14,6 +14,10 @@ export function validateTradingConfig(config) {
   if (!Number.isFinite(config.dailyLossLimit) || config.dailyLossLimit <= 0) {
     throw new RangeError("Set a daily loss stop greater than zero.");
   }
+  if (!Number.isSafeInteger(config.duration) || ![15, 30, 60].includes(config.duration) ||
+      config.durationUnit !== "s") {
+    throw new RangeError("Choose a 15, 30, or 60 second contract expiry.");
+  }
   if (!Number.isSafeInteger(config.minimumRuleCount) ||
       config.minimumRuleCount < 1 || config.minimumRuleCount > 8) {
     throw new RangeError("Choose between 1 and 8 matching VPA rules.");

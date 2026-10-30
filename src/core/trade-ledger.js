@@ -54,7 +54,14 @@ export function saveTradingLedger(storage, ledger) {
   storage.setItem(ledgerKey(ledger.accountId), JSON.stringify(ledger));
 }
 
-export function recordBotPurchase(ledger, { contractId, direction, stake, timestamp, candleTimestamp }) {
+export function recordBotPurchase(ledger, {
+  contractId,
+  direction,
+  stake,
+  timestamp,
+  candleTimestamp,
+  symbol
+}) {
   if (!Number.isSafeInteger(Number(contractId)) || Number(contractId) <= 0 ||
       !["bullish", "bearish"].includes(direction) ||
       !Number.isFinite(stake) || stake <= 0 || !Number.isFinite(timestamp)) {
@@ -68,7 +75,8 @@ export function recordBotPurchase(ledger, { contractId, direction, stake, timest
       direction,
       stake,
       candleTimestamp,
-      purchaseTimestamp: timestamp
+      purchaseTimestamp: timestamp,
+      ...(typeof symbol === "string" ? { symbol } : {})
     },
     tradeLog: [{
       contractId: Number(contractId),
@@ -76,13 +84,20 @@ export function recordBotPurchase(ledger, { contractId, direction, stake, timest
       stake,
       timestamp,
       result: "OPEN",
-      profit: null
+      profit: null,
+      ...(typeof symbol === "string" ? { symbol } : {})
     }, ...ledger.tradeLog].slice(0, 100)
   };
   return updated;
 }
 
-export function reserveBotPurchase(ledger, { direction, stake, timestamp, candleTimestamp }) {
+export function reserveBotPurchase(ledger, {
+  direction,
+  stake,
+  timestamp,
+  candleTimestamp,
+  symbol
+}) {
   if (ledger.openContract) throw new Error("A bot contract is already pending or open.");
   if (!["bullish", "bearish"].includes(direction) ||
       !Number.isFinite(stake) || stake <= 0 || !Number.isFinite(timestamp)) {
@@ -97,12 +112,20 @@ export function reserveBotPurchase(ledger, { direction, stake, timestamp, candle
       stake,
       candleTimestamp,
       purchaseTimestamp: timestamp,
-      status: "BUY_PENDING"
+      status: "BUY_PENDING",
+      ...(typeof symbol === "string" ? { symbol } : {})
     }
   };
 }
 
-export function confirmBotPurchase(ledger, { contractId, direction, stake, timestamp, candleTimestamp }) {
+export function confirmBotPurchase(ledger, {
+  contractId,
+  direction,
+  stake,
+  timestamp,
+  candleTimestamp,
+  symbol
+}) {
   if (!ledger.openContract || ledger.openContract.status !== "BUY_PENDING") {
     throw new Error("No pending bot purchase reservation exists.");
   }
@@ -117,7 +140,8 @@ export function confirmBotPurchase(ledger, { contractId, direction, stake, times
       stake,
       candleTimestamp,
       purchaseTimestamp: timestamp,
-      status: "OPEN"
+      status: "OPEN",
+      ...(typeof symbol === "string" ? { symbol } : {})
     },
     tradeLog: [{
       contractId: Number(contractId),
@@ -125,7 +149,8 @@ export function confirmBotPurchase(ledger, { contractId, direction, stake, times
       stake,
       timestamp,
       result: "OPEN",
-      profit: null
+      profit: null,
+      ...(typeof symbol === "string" ? { symbol } : {})
     }, ...ledger.tradeLog].slice(0, 100)
   };
   return updated;

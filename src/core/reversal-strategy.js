@@ -10,18 +10,43 @@ const REVERSAL_RULES = new Map([
   ["VOLUME_DIVERGENCE", "resistance"]
 ]);
 
-export function analyzeReversalSetup(analysis, { minimumRuleCount = 2 } = {}) {
+export function analyzeReversalSetup(analysis, {
+  indicator,
+  minimumRuleCount = 2,
+  durationSeconds = 15
+} = {}) {
   if (!Number.isSafeInteger(minimumRuleCount) || minimumRuleCount < 1 ||
       minimumRuleCount > 8) {
     throw new RangeError("Choose between 1 and 8 matching reversal rules.");
+  }
+  if (!Number.isSafeInteger(durationSeconds) || ![15, 30, 60].includes(durationSeconds)) {
+    throw new RangeError("Choose a 15, 30, or 60 second contract expiry.");
   }
   if (!analysis?.ready) {
     return {
       ready: false,
       direction: "neutral",
       rules: [],
-      durationCandles: null,
+      durationSeconds: null,
       reason: analysis?.reason ?? "Waiting for a completed candle and reversal baseline."
+    };
+  }
+  if (!indicator?.ready) {
+    return {
+      ready: false,
+      direction: "neutral",
+      rules: [],
+      durationSeconds: null,
+      reason: indicator?.reason ?? "Waiting for RSI and Bollinger confirmation."
+    };
+  }
+  if (!indicator.confirmed || !["bullish", "bearish"].includes(indicator.direction)) {
+    return {
+      ready: true,
+      direction: "neutral",
+      rules: [],
+      durationSeconds: null,
+      reason: indicator.reason
     };
   }
 
@@ -39,32 +64,36 @@ export function analyzeReversalSetup(analysis, { minimumRuleCount = 2 } = {}) {
       ready: true,
       direction: "neutral",
       rules: uniqueRules,
-      durationCandles: null,
-      reason: "Conflicting reversal evidence at key levels; skip this setup."
+      durationSeconds: null,
+      reason: "Conflicting reversal evidence in VPA at key levels; skip this setup."
     };
   }
 
   const direction = uniqueRules[0]?.direction ?? "neutral";
+  if (direction !== "neutral" && direction !== indicator.direction) {
+    return {
+      ready: true,
+      direction: "neutral",
+      rules: uniqueRules,
+      durationSeconds: null,
+      reason: "RSI/Bollinger and VPA reversal evidence disagree; skip this setup."
+    };
+  }
   if (uniqueRules.length < minimumRuleCount) {
     return {
       ready: true,
       direction: "neutral",
       rules: uniqueRules,
-      durationCandles: null,
+      durationSeconds: null,
       reason: `Need ${minimumRuleCount} matching reversal rules at a key level; ${uniqueRules.length} qualified.`
     };
   }
 
-  const activityBonus = analysis.relativeVolume >= 2 ? 1 : 0;
-  const spreadBonus = analysis.rangeRatio >= 1.4 ? 1 : 0;
-  const evidenceStrength = uniqueRules.length + activityBonus + spreadBonus;
-  const durationCandles = Math.max(1, Math.min(5, evidenceStrength));
   return {
     ready: true,
     direction,
     rules: uniqueRules,
-    evidenceStrength,
-    durationCandles,
-    reason: `${direction === "bullish" ? "Rise" : "Fall"} reversal: ${uniqueRules.length} matching rule(s) at a key level.`
+    durationSeconds,
+    reason: `${direction === "bullish" ? "Rise" : "Fall"} reversal: RSI/Bollinger confirmed with ${uniqueRules.length} matching VPA rule(s) at a key level.`
   };
 }
