@@ -11,10 +11,6 @@ export function validateTradingConfig(config) {
   if (!Number.isFinite(config.stake) || config.stake <= 0) {
     throw new RangeError("Stake must be greater than zero.");
   }
-  if (!Number.isSafeInteger(config.duration) || config.duration <= 0 ||
-      !["t", "s", "m"].includes(config.durationUnit)) {
-    throw new RangeError("Choose a valid contract duration and unit.");
-  }
   if (!Number.isFinite(config.dailyLossLimit) || config.dailyLossLimit <= 0) {
     throw new RangeError("Set a daily loss stop greater than zero.");
   }

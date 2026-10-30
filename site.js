@@ -1,7 +1,12 @@
-import { DerivMarketFeed, DERIV_API_BASE_URL } from "./src/data/deriv-market-feed.js";
+import {
+  CANDLE_TIMEFRAME_SECONDS,
+  DerivMarketFeed,
+  DERIV_API_BASE_URL
+} from "./src/data/deriv-market-feed.js";
 import { analyzeVpa } from "./src/core/vpa-engine.js";
+import { analyzeReversalSetup } from "./src/core/reversal-strategy.js";
 import { DerivTradingClient } from "./src/data/deriv-trading-client.js";
-import { getTradingLimitReason, shouldPlaceFromSignal, validateTradingConfig } from "./src/core/trading-controls.js";
+import { getTradingLimitReason, validateTradingConfig } from "./src/core/trading-controls.js";
 import {
   confirmBotPurchase,
   loadTradingLedger,
@@ -18,7 +23,7 @@ const elements = Object.fromEntries([
   "chart-empty", "candle-chart", "ohlc", "signal-chip", "signal-direction",
   "analysis-reason", "analysis-quality", "rule-list", "checklist", "pat",
   "validate-pat", "account-status", "account", "stake", "currency-readout",
-  "duration", "duration-unit", "daily-loss", "min-rules",
+  "expiry-readout", "daily-loss", "min-rules",
   "real-confirm", "start-bot", "stop-bot", "bot-status-chip", "bot-status",
   "bot-pnl", "hourly-count", "open-contract", "trade-log", "recover-contract",
   "reconcile-pending"
@@ -130,7 +135,7 @@ function renderRules(analysis) {
   if (!analysis?.rules?.length) {
     const empty = document.createElement("p");
     empty.className = "muted";
-    empty.textContent = analysis?.ready ? "No VPA pattern matched the latest completed candle." : "VPA rules are waiting for enough completed candles.";
+    empty.textContent = analysis?.ready ? "No reversal pattern qualified at a key level." : "Reversal rules are waiting for enough completed candles.";
     root.append(empty);
     return;
   }
@@ -224,7 +229,7 @@ function renderTradingState() {
   elements["validate-pat"].disabled = Boolean(botBusy || (openContract && tradingClient?.isConnected));
   elements.pat.disabled = Boolean(botBusy || (openContract && tradingClient?.isConnected));
   for (const control of [
-    elements.stake, elements.duration, elements["duration-unit"],
+    elements.stake,
     elements["daily-loss"], elements["min-rules"],
     elements["real-confirm"]
   ]) {
@@ -249,6 +254,9 @@ function refreshTradingControls() {
     !tradingLedger?.openContract);
   elements["start-bot"].disabled = !canStart;
   elements["stop-bot"].disabled = !(botRunning || startAttemptPending);
+  elements["start-bot"].textContent = botRunning
+    ? "Bot running"
+    : startAttemptPending ? "Starting…" : "Start bot";
   elements["stop-bot"].textContent = startAttemptPending ? "Cancel start" : "Stop new orders";
 }
 
@@ -372,7 +380,9 @@ function handleTradingMessage(message) {
     if (Number.isFinite(dailyLimit) && loss >= dailyLimit) {
       stopBot(`${summary} Daily loss stop reached; no further orders.`, "error");
     } else {
-      setBotStatus(summary);
+      setBotStatus(botRunning
+        ? `${summary} Bot remains active and is waiting for the next fresh reversal setup.`
+        : summary);
       renderTradingState();
       if (!botRunning && tradingClient) {
         unsubscribeTrading?.();
@@ -393,8 +403,11 @@ async function maybePlaceOrder(candle, candles) {
   if (!botRunning || !botConfig || !tradingClient || orderInFlight ||
       candle.timestamp === lastHandledCandleTimestamp) return;
   lastHandledCandleTimestamp = candle.timestamp;
-  const analysis = analyzeVpa(candles);
-  if (!shouldPlaceFromSignal(analysis, botConfig.minimumRuleCount)) return;
+  const analysis = analyzeReversalSetup(analyzeVpa(candles), {
+    minimumRuleCount: botConfig.minimumRuleCount
+  });
+  if (!analysis.ready || !["bullish", "bearish"].includes(analysis.direction) ||
+      analysis.durationCandles === null) return;
   if (!Number.isFinite(availableBalance) || availableBalance < botConfig.stake) {
     stopBot("Available balance is below the configured stake; automatic orders stopped.", "error");
     return;
@@ -418,13 +431,14 @@ async function maybePlaceOrder(candle, candles) {
   let confirmedContractId = null;
   let reservationTimestamp = null;
   try {
+    const durationSeconds = analysis.durationCandles * CANDLE_TIMEFRAME_SECONDS;
     const proposal = await tradingClient.requestRiseFallProposal({
       symbol: botConfig.symbol,
       currency: botConfig.currency,
       direction: analysis.direction,
       stake: botConfig.stake,
-      duration: botConfig.duration,
-      durationUnit: botConfig.durationUnit
+      duration: durationSeconds,
+      durationUnit: "s"
     });
     if (!botRunning) {
       setBotStatus("Bot stopped before the order request; no order was sent.");
@@ -504,6 +518,9 @@ function render(snapshot) {
   const closed = latestCandles.filter((candle) => candle.isClosed);
   const latest = latestCandles.at(-1);
   const analysis = analyzeVpa(latestCandles);
+  const reversal = analyzeReversalSetup(analysis, {
+    minimumRuleCount: Number(elements["min-rules"].value)
+  });
   setConnection(snapshot.status, snapshot.error);
   elements.price.textContent = price(snapshot.lastQuote);
   elements["market-symbol"].textContent = snapshot.symbol ?? "No market selected";
@@ -519,22 +536,26 @@ function render(snapshot) {
     ? "—"
     : `${analysis.relativeVolume.toFixed(2)}×`;
 
-  const direction = analysis.ready ? analysis.direction : "neutral";
+  const direction = reversal.direction;
   const labels = {
-    bullish: ["RISE BIAS", "Potential Rise"],
-    bearish: ["FALL BIAS", "Potential Fall"],
-    neutral: [analysis.ready ? "NO SETUP" : "WARMING UP", analysis.ready ? "No directional setup" : "Building VPA baseline"]
+    bullish: ["RISE REVERSAL", "Potential Rise reversal"],
+    bearish: ["FALL REVERSAL", "Potential Fall reversal"],
+    neutral: [analysis.ready ? "NO REVERSAL" : "WARMING UP", analysis.ready ? "No qualified reversal setup" : "Building VPA baseline"]
   };
   elements["signal-chip"].textContent = labels[direction][0];
   elements["signal-chip"].className = `signal-chip ${direction}`;
   elements["signal-direction"].textContent = labels[direction][1];
   elements["signal-direction"].className = `signal-direction ${direction}`;
-  elements["analysis-reason"].textContent = analysis.reason ??
-    `${analysis.bullishCount} bullish and ${analysis.bearishCount} bearish VPA rule${analysis.rules.length === 1 ? "" : "s"} matched.`;
-  elements["analysis-quality"].textContent = analysis.ready
-    ? `Relative activity ${analysis.relativeVolume.toFixed(2)}× · spread ${analysis.rangeRatio.toFixed(2)}× average · tick-count proxy`
+  elements["analysis-reason"].textContent = reversal.reason;
+  elements["analysis-quality"].textContent = reversal.durationCandles !== null
+    ? `Setup-mapped expiry: ${reversal.durationCandles} × 5-second candle(s) (${reversal.durationCandles * CANDLE_TIMEFRAME_SECONDS} seconds) · evidence count is not a win probability`
+    : analysis.ready
+      ? `Reversal-only filter · ${analysis.bullishCount} bullish / ${analysis.bearishCount} bearish VPA pattern(s) · tick-count proxy`
     : "";
-  renderRules(analysis);
+  elements["expiry-readout"].value = reversal.durationCandles === null
+    ? "Waiting for setup"
+    : `${reversal.durationCandles} candles · ${reversal.durationCandles * CANDLE_TIMEFRAME_SECONDS}s`;
+  renderRules({ ...analysis, rules: reversal.rules });
   renderChecklist(analysis);
   drawCandles(latestCandles);
   if (snapshot.status !== "streaming" && (botRunning || startAttemptPending)) {
@@ -703,8 +724,6 @@ elements["start-bot"].addEventListener("click", async () => {
     accountId: account?.account_id,
     accountType: account?.account_type,
     stake: Number(elements.stake.value),
-    duration: Number(elements.duration.value),
-    durationUnit: elements["duration-unit"].value,
     dailyLossLimit: Number(elements["daily-loss"].value),
     minimumRuleCount: Number(elements["min-rules"].value),
     realAccountConfirmed: elements["real-confirm"].checked,
@@ -726,7 +745,7 @@ elements["start-bot"].addEventListener("click", async () => {
       throw new Error("Load accounts with a trade-scoped PAT first.");
     }
     if (account.account_type === "real" &&
-        !window.confirm(`FINAL CHECK: Start automatic trading on REAL account ${account.account_id} using ${config.stake} ${config.currency} per order, ${config.duration} ${config.durationUnit === "s" ? "seconds" : config.durationUnit === "t" ? "ticks" : "minutes"} expiry, and ${config.dailyLossLimit} ${config.currency} daily bot-loss stop?`)) {
+        !window.confirm(`FINAL CHECK: Start automatic reversal trading on REAL account ${account.account_id} using ${config.stake} ${config.currency} per order, an adaptive 1–5 candle expiry (5–25 seconds), and ${config.dailyLossLimit} ${config.currency} daily bot-loss stop?`)) {
       return;
     }
 
@@ -855,7 +874,7 @@ elements["stop-bot"].addEventListener("click", () => {
 });
 
 for (const control of [
-  elements.stake, elements.duration, elements["duration-unit"],
+  elements.stake,
   elements["daily-loss"], elements["min-rules"]
 ]) {
   control.addEventListener("input", renderTradingState);

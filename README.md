@@ -1,7 +1,7 @@
-# VPA Edge website
+# VPA Edge reversal website
 
 VPA Edge is a standalone website for watching Deriv five-second candles and
-reading heuristic Volume Price Analysis (VPA) signals.
+reading heuristic, key-level Volume Price Analysis (VPA) reversal signals.
 
 The market display is live-feed-only. It uses Deriv's public tick WebSocket and
 does not provide simulated prices, replay, or generated candles. On disconnect,
@@ -26,12 +26,15 @@ pre-trade checklist update as new candles close.
 The public market feed and VPA dashboard need no account login or token. To
 place live orders, a trade-scoped PAT is required to load accounts and
 authenticate the trading connection. The PAT stays in page memory only and is
-cleared after the authenticated WebSocket is connected. The bot
-defaults to a demo account, 0.35 stake in account currency, 5-second contract
-duration, and one matching VPA rule. There is no hourly order cap; the bot
-waits for each contract to settle before placing another order and continues
-only while it receives new qualifying VPA signals. You must set a daily
-bot-loss stop before starting. Real-account selection requires an
+cleared after the authenticated WebSocket is connected. The bot defaults to a
+demo account and 0.35 stake in account currency. It takes reversal-only
+signals with at least two matching patterns at support or resistance, skips
+conflicting evidence, and maps rule count plus relative activity/spread to an
+expiry of one to five five-second candles (5–25 seconds). That mapping is a
+heuristic, not a measured win probability. There is no hourly order cap; the
+bot waits for each contract to settle before placing another order and
+continues only while it receives new qualifying reversal signals. You must set
+a daily bot-loss stop before starting. Real-account selection requires an
 acknowledgement and an additional confirmation.
 
 Starting the bot authorizes automatic Rise/Fall contracts on new completed-bar
@@ -46,6 +49,9 @@ Deriv's public price ticks do not represent centralized traded volume. VPA's
 volume comparisons therefore use the number of ticks per candle as an activity
 proxy, not institutional or exchange volume. VPA results are heuristic and
 not guaranteed predictions or trade instructions.
+No configuration can guarantee a high win rate or near-zero losses; this
+strategy has not been validated as profitable through independent live or
+out-of-sample results.
 
 Run the test suite with:
 

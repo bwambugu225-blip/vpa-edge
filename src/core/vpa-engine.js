@@ -198,6 +198,8 @@ export function analyzeVpa(candles, { lookback = LOOKBACK } = {}) {
     rangeRatio,
     volumeType: current.volumeType,
     keyLevels: { support: priorLow, resistance: priorHigh },
+    nearSupport,
+    nearResistance,
     checklist: {
       volumeIncreasing: relativeVolume > 1,
       effortMatchesResult: (relativeVolume >= 1) === (rangeRatio >= 1),

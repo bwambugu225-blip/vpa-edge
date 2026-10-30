@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#101820">
-    <title>VPA Edge · Deriv Rise/Fall</title>
+    <title>VPA Edge · Deriv Reversal Bot</title>
     <link rel="stylesheet" href="./site.css">
   </head>
   <body>
@@ -18,8 +18,8 @@
       <section class="hero">
         <div>
           <p class="eyebrow">PRICE ACTION, WITH CONTEXT</p>
-          <h1>Read the effort.<br><span>Control every order.</span></h1>
-          <p class="hero-copy">Live Deriv prices, five-second VPA signals, and explicit controls for Rise/Fall order size, expiry, account, and loss limits.</p>
+          <h1>Find the reversal.<br><span>Control every order.</span></h1>
+          <p class="hero-copy">Live Deriv prices, key-level reversal signals, adaptive 1–5 candle Rise/Fall expiry, and explicit account and loss controls.</p>
         </div>
         <div class="feed-controls">
           <label for="symbol">Underlying</label>
@@ -57,7 +57,7 @@
 
         <article class="panel signal-panel">
           <div class="panel-heading">
-            <div><p class="eyebrow">LATEST CLOSED CANDLE</p><h2>VPA read</h2></div>
+            <div><p class="eyebrow">LATEST CLOSED CANDLE</p><h2>Reversal setup</h2></div>
             <span id="signal-chip" class="signal-chip neutral">WAITING</span>
           </div>
           <div id="signal-direction" class="signal-direction neutral">No signal yet</div>
@@ -89,16 +89,15 @@
 
         <article class="panel trading-panel">
           <div class="panel-heading">
-            <div><p class="eyebrow">AUTOMATION CONTROLS</p><h2>Rise/Fall bot</h2></div>
+            <div><p class="eyebrow">AUTOMATION CONTROLS</p><h2>Binary reversal bot</h2></div>
             <span id="bot-status-chip" class="signal-chip neutral">STOPPED</span>
           </div>
           <div class="settings-grid">
             <div><label for="stake">Stake per order</label><input id="stake" type="number" min="0.01" step="0.01" value="0.35"></div>
             <div><label for="currency-readout">Account currency</label><input id="currency-readout" value="From account" readonly></div>
-            <div><label for="duration">Contract expiry</label><input id="duration" type="number" min="1" step="1" value="5"></div>
-            <div><label for="duration-unit">Expiry unit</label><select id="duration-unit"><option value="s" selected>Seconds</option><option value="t">Ticks</option><option value="m">Minutes</option></select></div>
+            <div><label for="expiry-readout">Adaptive contract expiry</label><input id="expiry-readout" value="Waiting for setup" readonly></div>
             <div><label for="daily-loss">Daily bot loss stop</label><input id="daily-loss" type="number" min="0.01" step="0.01" placeholder="Required"></div>
-            <div><label for="min-rules">Required matching VPA rules</label><select id="min-rules"><option value="1">1 rule</option><option value="2">2 rules</option><option value="3">3 rules</option></select></div>
+            <div><label for="min-rules">Required reversal confirmations</label><select id="min-rules"><option value="2" selected>2 patterns</option><option value="3">3 patterns</option><option value="4">4 patterns</option></select></div>
           </div>
           <label class="risk-check" for="real-confirm">
             <input id="real-confirm" type="checkbox">
@@ -110,19 +109,19 @@
           </div>
           <button id="recover-contract" type="button" class="button-secondary recover-button" hidden>Reconnect to monitor open contract</button>
           <button id="reconcile-pending" type="button" class="button-secondary recover-button" hidden>Reconcile uncertain order after checking Deriv</button>
-          <p id="bot-status" class="muted" role="status">Live market data starts automatically. Load a trade-scoped PAT only when you are ready to authorize trading.</p>
+          <p id="bot-status" class="muted" role="status">Reversal-only mode. Load a trade-scoped PAT when you are ready to authorize trading.</p>
           <div class="bot-summary">
             <span>BOT NET P/L TODAY <b id="bot-pnl">0.00</b></span>
             <span>ORDERS PAST HOUR <b id="hourly-count">0</b></span>
             <span>OPEN BOT CONTRACT <b id="open-contract">None</b></span>
           </div>
           <div id="trade-log" class="trade-log" aria-live="polite"></div>
-          <p class="fine-print">Unlimited entries; only one bot contract can be open at a time. A new order requires a fresh completed-candle VPA signal and the prior contract to settle. The daily stop tracks this bot's realized P/L in this browser profile; it cannot account for manual trades on Deriv. Never use a stake you cannot afford to lose.</p>
+          <p class="fine-print">Reversal-only entries require matching evidence at support or resistance; conflicting signals are skipped. Expiry adapts from 1–5 completed five-second candles (5–25 seconds) based on rule and candle evidence, not a measured win probability. Unlimited entries; only one bot contract can be open at a time. The daily stop tracks this bot's realized P/L in this browser profile; it cannot account for manual trades on Deriv. No strategy can promise a high win rate or near-zero losses; never stake money you cannot afford to lose.</p>
         </article>
       </section>
 
       <footer class="disclaimer">
-        <strong>Risk warning:</strong> Automated trading can lose money rapidly. VPA signals are heuristic, not guaranteed. Live tick count is an activity proxy, not actual traded volume. By selecting Real and starting the bot you authorize automatic orders subject to the controls above. Stop prevents future bot orders; it does not cancel an already purchased contract. PATs are held only in page memory and are not saved to disk.
+        <strong>Risk warning:</strong> Binary options are high risk and can lose the full stake. Reversal signals and adaptive expiry are heuristics, not validated probabilities or guaranteed predictions. Live tick count is an activity proxy, not actual traded volume. By selecting Real and starting the bot you authorize automatic orders subject to the controls above. Stop prevents future bot orders; it does not cancel an already purchased contract. PATs are held only in page memory and are not saved to disk.
       </footer>
     </main>
     <script type="module" src="./site.js"></script>

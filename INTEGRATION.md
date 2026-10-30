@@ -26,19 +26,23 @@ the returned authenticated trading WebSocket. The PAT stays in page memory
 only and is cleared after the authenticated socket opens. The one-time
 WebSocket URL is never displayed or persisted.
 
-Starting the bot is opt-in. It defaults to a demo account, 0.35 account
-currency stake, 5-second contract duration, one order per rolling hour, and
-one same-direction VPA rule. A positive daily bot-loss limit is mandatory.
-Real accounts require a risk acknowledgement and a browser confirmation.
-Before enabling the bot, the site checks that the market is live, the account
-has no open portfolio contracts, the balance covers the stake, and a valid
-VPA baseline exists.
+Starting the bot is opt-in. It defaults to a demo account and 0.35 account
+currency stake. A positive daily bot-loss limit is mandatory. Real accounts
+require a risk acknowledgement and a browser confirmation. Before enabling the
+bot, the site checks that the market is live, the account has no open portfolio
+contracts, the balance covers the stake, and a valid VPA baseline exists.
 
-For each new qualifying closed candle, the bot requests a CALL (Rise) or PUT
-(Fall) proposal, caps the buy price at the configured stake, reserves the
-hourly-order slot before submitting, and monitors settlement. An uncertain
-buy request is never retried automatically; the bot retains a risk lock until
-the user checks the Deriv account and reconciles the result.
+The bot filters for reversal patterns at their relevant support/resistance
+level, requires at least two matching patterns by default, and skips conflicting
+directional evidence. For each new qualifying closed candle, it maps the
+number of distinct patterns and relative activity/spread evidence to an expiry
+of one to five candle intervals (5–25 seconds). This is a deterministic
+heuristic, not a probability or validated performance estimate. The bot
+requests a CALL (Rise) or PUT (Fall) proposal, caps the buy price at the
+configured stake, and monitors settlement. There is no hourly trade cap, but
+it will not open another bot contract until the current one settles. An
+uncertain buy request is never retried automatically; the bot retains a risk
+lock until the user checks the Deriv account and reconciles the result.
 
 The browser ledger tracks this bot's realized results. It cannot include
 manual trades or other software on the same account and is not a guaranteed
@@ -53,7 +57,8 @@ does not cancel an already purchased contract.
   sent only after the user starts the bot.
 - Tick counts are an activity proxy and must not be interpreted as actual
   traded volume or institutional order flow.
-- Rise/Fall signals are heuristic, not guaranteed predictions.
+- Reversal signals and adaptive expiries are heuristic, not validated
+  probabilities or guaranteed predictions; near-zero losses cannot be promised.
 
 ## Verify
 
@@ -61,7 +66,7 @@ does not cancel an already purchased contract.
 2. Connect a symbol such as `R_100`; confirm tick history loads and the chart
    begins showing five-second candles.
 3. Load a trade-scoped PAT and select the demo account first.
-4. Set the required daily loss cap, confirm the account currency, stake,
-   duration, and hourly order cap, then select **Start bot**.
+4. Set the required daily loss cap, confirm the account currency and stake,
+   review the setup-driven expiry, then select **Start bot**.
 5. Run `npm.cmd test` to verify the Deriv request, candle aggregation, VPA
    rules, trading controls, and risk ledger.
